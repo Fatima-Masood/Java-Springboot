@@ -1,0 +1,128 @@
+openapi: 3.0.1
+info:
+  title: News API
+  description: News API Specification
+  version: 0.0.1
+servers:
+  - url: /
+paths:
+  /api/v1/news/{newsId}:
+    get:
+      tags:
+        - news
+      parameters:
+        - name: newsId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/News'
+    put:
+      tags:
+        - news
+      parameters:
+        - name: newsId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/News'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/News'
+    delete:
+      tags:
+        - news
+      operationId: delete
+      parameters:
+        - name: newsId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/News'
+  /api/v1/news:
+    get:
+      tags:
+        - news
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 1000
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/News'
+    post:
+      tags:
+        - news
+      operationId: post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/News'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/News'
+components:
+  schemas:
+    News:
+      type: object
+      properties:
+        newsId:
+          type: integer
+          format: int64
+        title:
+          type: string
+        details:
+          type: string
+        reportedBy:
+          type: string
+          format: date-time
+        reportedAt:
+          type: string
+          format: date-time
