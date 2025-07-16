@@ -1,0 +1,11 @@
+**/target/
+**/.classpath
+**/.project
+**/.factorypath
+**/.settings/
+**/.sts4-cache/
+**/.idea/
+*.iml
+**/bin/
+**/node_modules/
+**/package-lock.json
