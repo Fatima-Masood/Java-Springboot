@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: data-0.0.1
+      author: news team
+      changes:
+        - insert:
+            tableName: news
+            columns:
+              - column:
+                  name: news_id
+                  value: '123'
+              - column:
+                  name: title
+                  value: title 123
+              - column:
+                  name: details
+                  value: details 123
+              - column:
+                  name: reported_by
+                  value: reporter 123
+              - column:
+                  name: reported_at
+                  value: '2000-01-01T12:00:00'

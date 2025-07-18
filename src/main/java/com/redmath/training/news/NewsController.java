@@ -10,7 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -57,6 +59,7 @@ public class NewsController {
 
 
     @PostMapping("/api/v1/news")
+    @ResponseStatus (HttpStatus.CREATED)
     public ResponseEntity<News> post(@RequestBody News request) {
         News news = new News(
                 System.currentTimeMillis(),
@@ -71,6 +74,7 @@ public class NewsController {
     }
 
     @PutMapping("/api/v1/news/{newsId}")
+    @Transactional
     public ResponseEntity<News> update(@PathVariable("newsId") Long newsId, @RequestBody News updatedNews) {
         Optional<News> existing = newsRepository.findById(newsId);
         if (existing.isEmpty()) {
