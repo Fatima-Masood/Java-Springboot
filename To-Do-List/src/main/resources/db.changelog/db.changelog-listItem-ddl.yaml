@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-listItem-create-collection
+      author: yourname
+      changes:
+        - createCollection:
+            collectionName: listItems
+
+  - changeSet:
+      id: 2-listItem-create-indexes
+      author: yourname
+      changes:
+        - createIndex:
+            collectionName: listItems
+            indexName: idx_listItems_dueDate
+            keys:
+              dueDate: 1
+        - createIndex:
+            collectionName: listItems
+            indexName: idx_listItems_isCompleted
+            keys:
+              isCompleted: 1
+        - createIndex:
+            collectionName: listItems
+            indexName: idx_listItems_userId
+            keys:
+              userId: 1

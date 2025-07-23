@@ -1,0 +1,4 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb+srv://sfmasood13:pass1234@cluster0.6anla7s.mongodb.net/TodoList?retryWrites=true&w=majority&appName=Cluster0
