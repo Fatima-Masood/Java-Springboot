@@ -1,0 +1,25 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb+srv://sfmasood13:pass1234@cluster0.6anla7s.mongodb.net/TodoList?retryWrites=true&w=majority&appName=Cluster0
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: Ov23lidscVeRnEqsY1WE
+            client-secret: 27f19043b8852913be338bebe6b231a8d019d915
+
+api:
+  security:
+    ignored: /health,/metrics
+
+jwt:
+  signing:
+    key: 12345678901234567890123456789012
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG

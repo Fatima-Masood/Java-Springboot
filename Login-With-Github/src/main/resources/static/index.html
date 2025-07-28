@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Spring Boot Github Single Sign On</title>
+    <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+</head>
+<body>
+
+<h1>Hello <span th:text="${user.attributes.get('name')}"></span></h1>
+<a th:href="@{/logout}" role="button">Logout</a>
+
+<br>
+<h2>User Info</h2>
+<table role="grid">
+    <thead>
+    <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    <tr>
+        <td>Name</td>
+        <td th:text="${user.attributes.get('name')}"></td>
+    </tr>
+
+    <tr th:each="ga : ${user.authorities}">
+        <td>Granted Authority: <span th:text="${ga.class.simpleName}"></span></td>
+        <td th:text="${ga.authority}"></td>
+    </tr>
+    </tbody>
+</table>
+
+</body>
+</html>

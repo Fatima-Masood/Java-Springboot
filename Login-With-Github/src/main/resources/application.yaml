@@ -1,0 +1,34 @@
+spring:
+  h2:
+    console:
+      enabled: true
+  datasource:
+    url: jdbc:h2:mem:news
+    username: test
+    password: test
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: Ov23lidscVeRnEqsY1WE
+            client-secret: 27f19043b8852913be338bebe6b231a8d019d915
+
+api:
+  security:
+    ignored: /health,/metrics
+
+logging:
+  level:
+    com.redmath.training: DEBUG
+
+jwt:
+  signing:
+    key: 12345678901234567890123456789012
+
+
+

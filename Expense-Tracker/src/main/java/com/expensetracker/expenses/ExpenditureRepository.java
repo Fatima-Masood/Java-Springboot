@@ -1,0 +1,11 @@
+package com.expensetracker.expenses;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+import java.util.List;
+
+public interface ExpenditureRepository extends MongoRepository<Expenditure, String> {
+    void deleteByUser(String user);
+
+    List<Expenditure> findByUser(String userId);
+}

@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: data-insertion
+      author: news team
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: '1'
+              - column:
+                  name: name
+                  value: admin
+              - column:
+                  name: password
+                  value: '{bcrypt}$2a$12$U5D4W0kQ1HE6qlcE.ErYx.Y3/ipGj4Ok1VRsg5Bn3lX7Vwqri/Qke'
+              - column:
+                  name: roles
+                  value: ADMIN
+              - column:
+                  name: last_updated_at
+                  value: '2000-01-01T12:00:00'
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: '2'
+              - column:
+                  name: name
+                  value: reporter
+              - column:
+                  name: password
+                  value: '{bcrypt}$2a$12$U5D4W0kQ1HE6qlcE.ErYx.Y3/ipGj4Ok1VRsg5Bn3lX7Vwqri/Qke'
+              - column:
+                  name: roles
+                  value: REPORTER
+              - column:
+                  name: last_updated_at
+                  value: '2000-01-01T12:00:00'
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: '3'
+              - column:
+                  name: name
+                  value: editor
+              - column:
+                  name: password
+                  value: '{bcrypt}$2a$12$U5D4W0kQ1HE6qlcE.ErYx.Y3/ipGj4Ok1VRsg5Bn3lX7Vwqri/Qke'
+              - column:
+                  name: roles
+                  value: EDITOR
+              - column:
+                  name: last_updated_at
+                  value: '2000-01-01T12:00:00'

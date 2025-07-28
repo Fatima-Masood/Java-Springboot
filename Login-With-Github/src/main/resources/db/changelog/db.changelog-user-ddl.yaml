@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: schema-lecture-be-03
+      author: news team
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(50)
+              - column:
+                  name: password
+                  type: varchar(200)
+              - column:
+                  name: roles
+                  type: varchar(200)
+              - column:
+                  name: last_updated_at
+                  type: DATETIME
+        - addPrimaryKey:
+            tableName: users
+            columnNames: id
+            constraintName: users_pk
+        - addUniqueConstraint:
+            tableName: users
+            columnNames: name
+            constraintName: users_uk

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Login with GitHub</title>
+    <style>
+        body {
+          background: #f5f5f5;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          margin: 0;
+        }
+
+        .login-container {
+          background: white;
+          padding: 40px;
+          border-radius: 12px;
+          box-shadow: 0 0 15px rgba(0,0,0,0.1);
+          text-align: center;
+        }
+
+        .login-container h1 {
+          margin-bottom: 10px;
+          font-size: 28px;
+          color: #333;
+        }
+
+        .login-container p {
+          margin-bottom: 20px;
+          color: #666;
+        }
+
+        .github-btn {
+          display: inline-flex;
+          align-items: center;
+          text-decoration: none;
+          background: #333;
+          color: white;
+          padding: 12px 20px;
+          border-radius: 6px;
+          font-size: 16px;
+          transition: background 0.3s ease;
+        }
+
+        .github-btn img {
+          width: 24px;
+          height: 24px;
+          margin-right: 10px;
+        }
+
+        .github-btn:hover {
+          background: #444;
+        }
+
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <h1>Welcome</h1>
+    <p>Login with your GitHub account to continue</p>
+    <a class="github-btn" href="/auth/github">
+        <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub logo" />
+        Login with GitHub
+    </a>
+</div>
+</body>
+</html>
