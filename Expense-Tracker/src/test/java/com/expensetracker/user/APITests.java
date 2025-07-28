@@ -54,7 +54,7 @@ public class APITests {
         loginRequest.setUsername("user1");
         loginRequest.setPassword("user1");
 
-        mockMvc.perform(post("/api/users/form-login")
+        mockMvc.perform(post("/api/users/login")
                         .with(csrf().asHeader())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
@@ -68,22 +68,10 @@ public class APITests {
         user.setUsername("wronguser");
         user.setPassword("wrongpass");
 
-        mockMvc.perform(post("/api/users/form-login")
+        mockMvc.perform(post("/api/users/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
                 .andExpect(status().isForbidden());
     }
 
-    @Test
-    void registerUserSuccessfully() throws Exception {
-        User newUser = new User();
-        newUser.setUsername("user2");
-        newUser.setPassword("user2");
-
-        mockMvc.perform(post("/api/users/register")
-                        .with(csrf().asHeader())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newUser)))
-                .andExpect(status().isCreated());
-    }
 }

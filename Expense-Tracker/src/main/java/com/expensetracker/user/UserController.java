@@ -31,38 +31,47 @@ public class UserController {
     @PostMapping("/register")
     @ResponseStatus (HttpStatus.CREATED)
     public ResponseEntity<?> register(@RequestBody UserDTO userDTO) {
-        userService.register(userDTO.getUsername(), userDTO.getPassword());
-        return ResponseEntity.ok("User registered successfully");
+
+        if (userDTO.getUsername() == null || userDTO.getPassword() == null)
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
+
+        try {
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(userDTO.getUsername(), userDTO.getPassword()));
+
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            userService.register(userDTO.getUsername(), userDTO.getPassword());
+            return ResponseEntity.ok("User registered successfully");
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Not logged in");
+        }
     }
 
     // LOGIN
-    @PostMapping("/form-login")
-    public ResponseEntity<String> formLogin(@RequestBody User user) {
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody User user) {
+        if (user.getUsername()== null || user.getPassword() == null)
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
         try {
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(auth);
             return ResponseEntity.ok("Login successful");
         } catch (BadCredentialsException e) {
-            return ResponseEntity.status(401).body("Invalid credentials");
-        }
-    }
-    @PostMapping("/auth-login")
-    public ResponseEntity<String> authLogin(@RequestBody User user) {
-        try {
-            Authentication auth = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
-            SecurityContextHolder.getContext().setAuthentication(auth);
-            return ResponseEntity.ok("Login successful");
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(401).body("Invalid credentials");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("NOT ALLOWED");
         }
     }
 
+
     // DELETE + cascade delete expenditures
     @DeleteMapping("/{username}")
-    @PreAuthorize("#username == authentication.name")
     public ResponseEntity<String> deleteUser(@PathVariable String username) {
+
+        if (!username.equals(SecurityContextHolder.getContext().getAuthentication().getName())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         Optional<User> optionalUser = userRepository.findByUsername(username);
         if (optionalUser.isEmpty()) return ResponseEntity.notFound().build();
 
@@ -75,18 +84,21 @@ public class UserController {
 
     // UPDATE PASSWORD
     @PutMapping("/{username}/password")
-    @PreAuthorize("#username == authentication.name")
     public ResponseEntity<String> updatePassword(@PathVariable String username,
                                                  @RequestBody PasswordUpdateRequest request) {
+        if (!username.equals(SecurityContextHolder.getContext().getAuthentication().getName())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         Optional<User> optionalUser = userRepository.findByUsername(username);
         if (optionalUser.isEmpty()) return ResponseEntity.notFound().build();
 
         User user = optionalUser.get();
-        if (!passwordEncoder.matches(request.oldPassword, user.getPassword())) {
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             return ResponseEntity.badRequest().body("Incorrect old password");
         }
 
-        user.setPassword(passwordEncoder.encode(request.newPassword));
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         return ResponseEntity.ok("Password updated");
     }

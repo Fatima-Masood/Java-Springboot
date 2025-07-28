@@ -20,6 +20,7 @@ public class UserService implements UserDetailsService {
             throw new RuntimeException("User already exists");
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+
         return userRepository.save(user);
     }
 
