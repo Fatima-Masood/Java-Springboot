@@ -18,7 +18,6 @@ public class Expenditure {
 
     @Id
     private String id;
-    @DBRef
     private String user;
     private String title;
     private double amount;

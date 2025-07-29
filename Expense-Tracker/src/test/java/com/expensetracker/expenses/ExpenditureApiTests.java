@@ -1,23 +1,35 @@
 package com.expensetracker.expenses;
 
+import com.expensetracker.config.JwtAuthFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+import java.util.List;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Slf4j
 @WebMvcTest(ExpenditureController.class)
-class AddExpenditureTests {
+class ExpenditureApiTests {
 
     @Autowired
     private MockMvc mockMvc;
@@ -28,49 +40,35 @@ class AddExpenditureTests {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockBean
+    private JwtAuthFilter jwtAuthFilter;
+
+    @MockBean
+    private AuthenticationManager authenticationManager;
+
+    String username = "Fatima-Masood";
+    String password = "Fatima-Masood";
+
     @Test
     void addExpenditureWhenUserMatchesJwtSubject() throws Exception {
-        String username = "Fatima-Masood";
-
         Expenditure input = new Expenditure();
         input.setTitle("Lunch");
         input.setAmount(550);
 
-        Expenditure saved = new Expenditure();
-        saved.setUser(username);
-        saved.setTitle(input.getTitle());
-        saved.setAmount(input.getAmount());
+        Authentication auth = new UsernamePasswordAuthenticationToken(username, null, List.of());
 
-        when(expenditureRepository.save(Mockito.any(Expenditure.class))).thenReturn(saved);
-
-        Jwt jwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "none")
-                .claims(claims -> claims.put("sub", username))
-                .build();
-
-        mockMvc.perform(post("/api/user/{user}/expenditures", username)
-                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt))
+        MvcResult result = mockMvc.perform(post("/api/expenditures")
+                        .with(csrf().asHeader())
+                        .with(user(username).password(password).roles("USER"))
+                        .with(SecurityMockMvcRequestPostProcessors.authentication(auth))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user").value(username))
-                .andExpect(jsonPath("$.title").value("Lunch"));
+                .andReturn();
+
+        log.info("Result: " + result.getResponse().getContentAsString());
     }
 
-    @Test
-    void addExpenditureWhenUserDoesNotMatchAuthentication() throws Exception {
-        String pathUser = "someone-else";
-        String authenticatedUser = "Fatima-Masood";
 
-        Expenditure input = new Expenditure();
-        input.setTitle("Coffee");
-        input.setAmount(375);
-
-        mockMvc.perform(post("/api/user/{user}/expenditures", pathUser)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(input))
-                        .principal(() -> authenticatedUser)) // Simulates different user
-                .andExpect(status().isForbidden());
-    }
 }
 

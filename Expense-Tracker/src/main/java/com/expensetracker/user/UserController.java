@@ -53,11 +53,13 @@ public class UserController {
     public ResponseEntity<String> login(@RequestBody User user) {
         if (user.getUsername()== null || user.getPassword() == null)
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
+
         try {
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(auth);
             return ResponseEntity.ok("Login successful");
+
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("NOT ALLOWED");
         }
@@ -83,12 +85,9 @@ public class UserController {
     }
 
     // UPDATE PASSWORD
-    @PutMapping("/{username}/password")
-    public ResponseEntity<String> updatePassword(@PathVariable String username,
-                                                 @RequestBody PasswordUpdateRequest request) {
-        if (!username.equals(SecurityContextHolder.getContext().getAuthentication().getName())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+    @PutMapping("/password")
+    public ResponseEntity<String> updatePassword(@RequestBody PasswordUpdateRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
         Optional<User> optionalUser = userRepository.findByUsername(username);
         if (optionalUser.isEmpty()) return ResponseEntity.notFound().build();
@@ -102,4 +101,5 @@ public class UserController {
         userRepository.save(user);
         return ResponseEntity.ok("Password updated");
     }
+
 }

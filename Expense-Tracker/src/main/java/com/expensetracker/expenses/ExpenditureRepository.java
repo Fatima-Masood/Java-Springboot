@@ -7,5 +7,5 @@ import java.util.List;
 public interface ExpenditureRepository extends MongoRepository<Expenditure, String> {
     void deleteByUser(String user);
 
-    List<Expenditure> findByUser(String userId);
+    List<Expenditure> findByUser(String user);
 }

@@ -7,31 +7,29 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
-import jakarta.servlet.Filter;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -45,66 +43,64 @@ import java.time.Instant;
 @EnableMethodSecurity
 @Configuration
 @Slf4j
+@SecurityScheme(
+        name = "bearerAuth",
+        type = SecuritySchemeType.HTTP,
+        bearerFormat = "JWT",
+        scheme = "bearer"
+)
 
 public class SecurityConfig {
 
     private Jwt jwt;
+    private long expirySeconds = 3600;
+    private JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    UserService userService,
                                                    JwtEncoder jwtEncoder,
                                                    JwtAuthFilter jwtAuthFilter,
-                                                   AuthenticationManager authenticationManager)
-            throws Exception {
-        long expirySeconds = 3600;
-        JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
+                                                   AuthenticationManager authenticationManager) throws Exception {
+
 
         http.formLogin(config -> config
                 .successHandler((request, response, auth) -> {
-                    JwtClaimsSet jwtClaimsSet = JwtClaimsSet.builder()
-                            .subject(auth.getName())
-                            .expiresAt(Instant.now().plusSeconds(expirySeconds))
-                            .build();
-                    jwt = jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, jwtClaimsSet));
+                    jwt = generatejwt(auth, jwtEncoder);
+
                     String tokenResponse = "{\"token_type\":\"Bearer\",\"access_token\":\"" + jwt.getTokenValue()
                             + "\",\"expires_in\":" + expirySeconds + "}";
 
-                    response.setContentType("application/json");
-                    response.setCharacterEncoding("UTF-8");
-                    response.setStatus(HttpStatus.OK.value());
+                    response = generateResponse(response);
+
                     response.getWriter().write(tokenResponse);
                 })
                 .failureHandler((request, response, exception) -> {
                     response.setStatus(HttpStatus.UNAUTHORIZED.value());
                     response.getWriter().write("{\"error\":\"Authentication failed\"}");
-                })
+                }))
 
-        );
-
-        http.oauth2Login(config -> config
+                .oauth2Login(config -> config
                 .successHandler((request, response, auth) -> {
                     OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) auth;
                     OAuth2User oauth2User = oauth2Token.getPrincipal();
 
-                    String email = oauth2User.getAttribute("login");
-                    log.info(email);
+                    String username = oauth2User.getAttribute("login");
+                    log.info(username);
 
-                    userService.registerOAuthUserIfNeeded(email);
-
-                    JwtClaimsSet jwtClaimsSet = JwtClaimsSet.builder()
-                            .subject(email)
-                            .expiresAt(Instant.now().plusSeconds(expirySeconds))
-                            .build();
-                    jwt = jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, jwtClaimsSet));
+                    userService.registerOAuthUserIfNeeded(username);
 
                     auth = authenticationManager.authenticate(
-                            new UsernamePasswordAuthenticationToken(email, email));
+                            new UsernamePasswordAuthenticationToken(username, username));
                     SecurityContextHolder.getContext().setAuthentication(auth);
+
+                    jwt = generatejwt(auth, jwtEncoder);
 
                     String tokenResponse = "{\"token_type\":\"Bearer\",\"access_token\":\"" + jwt.getTokenValue()
                             + "\",\"expires_in\":" + expirySeconds + "}";
-                    response.setContentType("application/json");
+
+                    response = generateResponse(response);
+
                     response.getWriter().print(tokenResponse);
                 })
                 .failureHandler((request, response, exception) -> {
@@ -112,21 +108,17 @@ public class SecurityConfig {
                     response.sendRedirect("/login?error=" + exception.getMessage());
                     response.getWriter().print("Error" + exception.getMessage());
                 })
+        )
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(Customizer.withDefaults())
+                )
 
+                .sessionManagement(config ->
+                config.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 
-        );
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
-        http.oauth2ResourceServer(config -> config.jwt(jwtConfig -> jwtConfig.jwtAuthenticationConverter(jwt -> {
-            UserDetails user = userService.loadUserByUsername(jwt.getSubject());
-            return new JwtAuthenticationToken(jwt, user.getAuthorities());
-        })));
-
-        http.sessionManagement(config ->
-                config.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
-
-        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
-        http.authorizeHttpRequests(config -> config
+                .authorizeHttpRequests(config -> config
                 .requestMatchers(
                         "/error",
                         "/v3/api-docs/**",
@@ -135,15 +127,10 @@ public class SecurityConfig {
                         "/favicon.ico",
                         "/oauth2/**",
                         "/target/**",
-                        "/api/users/register",
-                        "/api/users/login").permitAll()
-                .anyRequest().authenticated()
-        );
+                        "/api/**").permitAll()
+                .anyRequest().authenticated())
 
-        http.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()));
-
-        http.httpBasic(AbstractHttpConfigurer::disable);
+                .csrf(csrf -> csrf.disable());
 
         return http.build();
     }
@@ -166,6 +153,32 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
+    }
+
+    private Jwt generatejwt(Authentication auth, JwtEncoder jwtEncoder){
+        JwtClaimsSet jwtClaimsSet = JwtClaimsSet.builder()
+                .subject(auth.getName())
+                .expiresAt(Instant.now().plusSeconds(expirySeconds))
+                .build();
+        jwt = jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, jwtClaimsSet));
+
+        return jwt;
+    }
+    private HttpServletResponse generateResponse(HttpServletResponse response){
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.setStatus(HttpStatus.OK.value());
+
+        response.setContentType("application/json");
+
+        Cookie cookie = new Cookie("access_token", jwt.getTokenValue());
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge((int) expirySeconds);
+        response.addCookie(cookie);
+
+        return response;
     }
 
 }

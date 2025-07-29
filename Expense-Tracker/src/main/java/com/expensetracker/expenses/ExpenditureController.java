@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users/{user}/expenditures")
+@RequestMapping("/api/expenditures")
 @RequiredArgsConstructor
 @Slf4j
 public class ExpenditureController {
@@ -20,51 +20,48 @@ public class ExpenditureController {
 
     @PostMapping
     public ResponseEntity<Expenditure> addExpenditure(
-            @PathVariable String user,
             @RequestBody Expenditure exp,
             Authentication authentication) {
-        if (!user.equals(authentication.getName())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (authentication != null ) {
+            exp.setUser(authentication.getName());
+            exp = expenditureRepository.save(exp);
+            return ResponseEntity.ok(exp);
         }
-
-        exp.setUser(user);
-        return ResponseEntity.ok(expenditureRepository.save(exp));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
 
     @PutMapping("/{id}")
-    public ResponseEntity<Expenditure> updateExpenditure(@PathVariable String user,
-                                                         @PathVariable String id,
+    public ResponseEntity<Expenditure> updateExpenditure(@PathVariable String id,
                                                          @RequestBody Expenditure exp,
-                                                            Authentication authentication) {
-        if (!user.equals(authentication.getName())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        Expenditure existing = expenditureRepository.findById(id).orElseThrow(() -> new RuntimeException("Expenditure not found"));
-        existing.setTitle(exp.getTitle());
-        existing.setAmount(exp.getAmount());
+                                                         Authentication authentication) {
+        if (exp.getUser().equals(authentication.getName())) {
+            Expenditure existing = expenditureRepository.findById(id).orElseThrow(() -> new RuntimeException("Expenditure not found"));
 
-        return ResponseEntity.ok(expenditureRepository.save(existing));
+            existing.setTitle(exp.getTitle());
+            existing.setAmount(exp.getAmount());
+
+            return ResponseEntity.ok(expenditureRepository.save(existing));
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteExpenditure(@PathVariable String user,
-                                                    @PathVariable String id,
+    @DeleteMapping("/{exp}")
+    public ResponseEntity<String> deleteExpenditure(@PathVariable Expenditure exp,
                                                     Authentication authentication) {
-        if (!user.equals(authentication.getName())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (exp.getUser().equals(authentication.getName())) {
+            expenditureRepository.deleteById(exp.getId());
+            return ResponseEntity.ok("Expenditure deleted");
         }
-        expenditureRepository.deleteById(id);
-        return ResponseEntity.ok("Expenditure deleted");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
     @GetMapping
-    public ResponseEntity<List<Expenditure>> getExpendituresByUser(@PathVariable String user,
-                                                                   Authentication authentication) {
-        if (!user.equals(authentication.getName())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    public ResponseEntity<List<Expenditure>> getExpendituresByUser(Authentication authentication) {
+        if (authentication!= null && authentication.getName() != null) {
+            return ResponseEntity.ok(expenditureRepository.findByUser(authentication.getName()));
         }
-        return ResponseEntity.ok(expenditureRepository.findByUser(user));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 }
 
