@@ -1,0 +1,140 @@
+:root {
+  --primary-color: #1498bb;
+  --secondary-color: #108099;
+  --light-color: #dce0e1;
+  --dark-color: #2c3e50;
+  --danger-color: #e74c3c;
+  --success-color: #2ecc71;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar {
+  background-color: var(--primary-color);
+  padding: 0.5rem 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-height: 5rem;
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 100%;
+  margin: auto 3rem;
+}
+
+.navbar-brand {
+  color: white;
+  text-decoration: none;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.navbar-toggler {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.navbar-collapse {
+  display: flex;
+  flex-grow: 1;
+  justify-content: flex-end;
+}
+
+.navbar-nav {
+  display: flex;
+  list-style: none;
+}
+
+.nav-item {
+  margin-left: 1.5rem;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: color 0.3s;
+  padding: 0.5rem 0;
+}
+
+.nav-link:hover {
+  color: var(--light-color);
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background-color: var(--secondary-color);
+  color: white;
+  border: 1px solid var(--secondary-color);
+}
+
+.btn-primary:hover {
+  background-color: #1a6ea7;
+  border-color: #1a6ea7;
+}
+
+.btn-outline-light {
+  background-color: transparent;
+  color: white;
+  border: 1px solid white;
+}
+
+.btn-outline-light:hover {
+  background-color: white;
+  color: var(--primary-color);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .navbar-toggler {
+    display: block;
+  }
+
+  .navbar-collapse {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    padding: 1rem 0;
+  }
+
+  .navbar-collapse.show {
+    display: flex;
+  }
+
+  .navbar-nav {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .nav-item {
+    margin: 0.5rem 0;
+    margin-left: 0;
+  }
+
+  .nav-link {
+    padding: 0.5rem 0;
+    display: block;
+  }
+}

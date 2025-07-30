@@ -16,7 +16,7 @@ api:
 
 jwt:
   signing:
-    key: 12345678901234567890123456789012
+    key: MyVerySecretKeyMyVerySecretKeyMyVerySecretKey123!
 
 logging:
   level:

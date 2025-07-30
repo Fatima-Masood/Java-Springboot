@@ -2,11 +2,11 @@
 const serverUri = 'http://localhost:8080';
 
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("loginForm").addEventListener("submit", loginHandler);
+  document.getElementById("registerForm").addEventListener("submit", registerHandler);
 });
 
 
-function loginHandler(e) {
+function registerHandler(e) {
   e.preventDefault();
 
   const user = document.getElementById("username").value.trim();
@@ -17,7 +17,7 @@ function loginHandler(e) {
     return;
   }
 
-  fetch(serverUri + "/api/users/login", {
+  fetch(serverUri + "/api/users/register", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

@@ -12,5 +12,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "yaml": "^2.8.0"
+  }
 }

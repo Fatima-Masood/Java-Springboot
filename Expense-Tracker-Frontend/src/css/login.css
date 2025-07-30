@@ -1,3 +1,12 @@
+:root {
+  --primary-color: #1498bb;
+  --secondary-color: #108099;
+  --light-color: #dce0e1;
+  --dark-color: #2c3e50;
+  --danger-color: #e74c3c;
+  --success-color: #2ecc71;
+}
+
 body {
     align-content: center;
     background-color: #f8f9fa;
@@ -14,24 +23,24 @@ body {
 }
 
 .btn-primary {
-    background-color: #0d6efd;
+    background-color: var(--primary-color);
     border: none;
     padding: 0.5rem;
     transition: all 0.3s;
 }
 
 .btn-primary:hover {
-    background-color: #0b5ed7;
+    background-color: var(--secondary-color);
     transform: translateY(-2px);
 }
 
 .form-control {
     padding: 0.75rem;
     border-radius: 8px;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--light-color);
 }
 
 .form-control:focus {
-    border-color: #86b7fe;
+    border-color: var(--secondary-color);
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
