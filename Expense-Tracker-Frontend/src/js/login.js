@@ -42,6 +42,7 @@ function loginHandler(e) {
     }
   })
   .then(data => {
+    localStorage.setItem("authToken", "true");
     window.location.href = '/pages/dashboard.html';
   })
   .catch(error => {

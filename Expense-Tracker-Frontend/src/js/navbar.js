@@ -1,122 +1,66 @@
+const serverUri = 'http://localhost:8080';
 
-  const navbarToggler = document.querySelector('.navbar-toggler');
-  const navbarCollapse = document.querySelector('.navbar-collapse');
-  const navLinks = document.getElementById('navLinks');
+function addNavItem(link, label, buttonClass = "customButton") {
+  const li = document.createElement("li");
+  li.className = "navItem";
 
-  navbarToggler.addEventListener('click', function() {
-    navbarCollapse.classList.toggle('show');
+  const a = document.createElement("button");
+  a.textContent = label;
+  a.href = "#";
+  a.className = buttonClass;
+
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (buttonClass !== "customButton")
+       logout(e);
+
+    const pageArea = document.getElementById("page-area");
+    pageArea.innerHTML = "";
+
+    const iframe = document.createElement("iframe");
+    iframe.src = link;
+    iframe.className = "page";
+
+    pageArea.appendChild(iframe);
+
+
   });
 
-  function updateNavbar() {
-    const isAuthenticated = checkAuthStatus();
+  li.appendChild(a);
+  document.querySelector("ul.navList").appendChild(li);
+}
 
-    navLinks.innerHTML = '';
 
-    if (isAuthenticated) {
-      const links = [
-            {
-              text: 'Dashboard',
-              onClick: () => {
-                window.location.href = '/pages/dashboard';
-              }
-            },
-            {
-              text: 'Expenditures',
-              href: '/expenditures'
-            },
-            {
-              text: 'Logout',
-              href: '#',
-              onClick: logout
-            }
-          ];
+function updateNavbar() {
+  const navList = document.querySelector("ul.navList");
+  navList.innerHTML = "";
 
-      links.forEach(link => {
-        const li = document.createElement('li');
-        li.className = 'nav-item';
-
-        const a = document.createElement('a');
-        a.className = 'nav-link';
-        a.href = link.href;
-        a.textContent = link.text;
-
-        if (link.onClick) {
-          a.addEventListener('click', link.onClick);
-        }
-
-        li.appendChild(a);
-        navLinks.appendChild(li);
-      });
-    } else {
-      const links = [
-            {
-              text: 'Login',
-              className: 'btn btn-outline-light',
-              onClick: () => {
-                window.location.href = '/pages/login.html';
-              }
-            },
-            {
-              text: 'Register',
-              className: 'btn btn-primary',
-              onClick: () => {
-                window.location.href = '/pages/register.html';
-              }
-            }
-          ];
-
-      links.forEach(link => {
-        const li = document.createElement('li');
-        li.className = 'nav-item';
-
-        const a = document.createElement('a');
-        a.className = `nav-link ${link.className || ''}`;
-        a.href = link.href;
-        a.textContent = link.text;
-
-        li.appendChild(a);
-        navLinks.appendChild(li);
-      });
-    }
+  if (checkAuthStatus()) {
+    addNavItem("/pages/dashboard.html", "Dashboard");
+    addNavItem("/pages/expenditures.html", "Expenditures");
+    addNavItem("/pages/login.html", "Logout", "customButtonLogout");
+  } else {
+    addNavItem("/pages/login.html", "Login");
+    addNavItem("/pages/register.html", "Register");
   }
+}
 
-  function checkAuthStatus() {
-    console.log(localStorage.getItem('authToken'));
-    return localStorage.getItem('authToken') !== null;
-  }
+function checkAuthStatus() {
+  return localStorage.getItem('authToken') !== null;
+}
 
-  function logout(e) {
+function logout(e) {
     e.preventDefault();
 
-    fetch(`${serverUri}/api/users/logout`, {
-      method: 'POST',
-      credentials: 'include'
-    })
-    .then(response => {
-      .then(response => {
-        if (response.ok) {
-          localStorage.removeItem('authToken');
-          updateNavbar();
-          window.location.href = '/pages/login.html';
-        } else {
-          throw new Error('Logout failed');
-        }
-    })
-    .catch(error => {
-      console.error('Logout error:', error);
-      alert('Failed to logout');
-    });
+    localStorage.removeItem('authToken');
     document.cookie = "access_token=; Max-Age=0; path=/; secure; HttpOnly";
-    window.location.href = '/pages/login.html';
+    updateNavbar();
+}
 
+window.addEventListener('storage', function (e) {
+  if (e.key === 'authToken') {
+    updateNavbar();
   }
+});
 
-  updateNavbar();
-
-  window.addEventListener('storage', function(e) {
-    if (e.key === 'authToken') {
-      updateNavbar();
-    }
-  });
-
-const serverUri = 'http://localhost:8080';
+document.addEventListener("DOMContentLoaded", updateNavbar);
