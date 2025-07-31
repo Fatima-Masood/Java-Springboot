@@ -5,6 +5,7 @@ import com.expensetracker.config.JwtAuthFilter;
 import com.expensetracker.dto.PasswordUpdateRequest;
 import com.expensetracker.expenses.ExpenditureRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,16 +20,19 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.List;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc
+@Slf4j
 public class UserApiTests {
 
     @Autowired
@@ -76,6 +80,7 @@ public class UserApiTests {
         loginRequest.setPassword("user1");
 
         mockMvc.perform(post("/api/users/login")
+                        .with(user("temp"))
                         .with(csrf().asHeader())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
@@ -101,15 +106,13 @@ public class UserApiTests {
         String oldPassword = "user1";
         String newPassword = "new-pass";
 
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, oldPassword, List.of()));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
         PasswordUpdateRequest request = new PasswordUpdateRequest();
         request.setOldPassword(oldPassword);
         request.setNewPassword(newPassword);
 
         mockMvc.perform(put("/api/users/" + username + "/password")
                         .with(csrf().asHeader())
+                        .with(user("Fatima-Masood"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());

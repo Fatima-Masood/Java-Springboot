@@ -50,24 +50,38 @@ class ExpenditureApiTests {
     String password = "Fatima-Masood";
 
     @Test
-    void addExpenditureWhenUserMatchesJwtSubject() throws Exception {
+    void addExpenditureSuccess() throws Exception {
         Expenditure input = new Expenditure();
         input.setTitle("Lunch");
         input.setAmount(550);
 
-        Authentication auth = new UsernamePasswordAuthenticationToken(username, null, List.of());
-
         MvcResult result = mockMvc.perform(post("/api/expenditures")
                         .with(csrf().asHeader())
-                        .with(user(username).password(password).roles("USER"))
-                        .with(SecurityMockMvcRequestPostProcessors.authentication(auth))
+                        .with(user("Fatima-Masood"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        log.info("Result: " + result.getResponse().getContentAsString());
+        log.info("Result: {}", result.getResponse().getContentAsString());
     }
+
+    @Test
+    void addExpenditureFailure() throws Exception {
+        Expenditure input = new Expenditure();
+        input.setTitle("Lunch");
+        input.setAmount(550);
+
+        MvcResult result = mockMvc.perform(post("/api/expenditures")
+                        .with(csrf().asHeader())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        log.info("Result: {}", result.getResponse().getContentAsString());
+    }
+
 
 
 }

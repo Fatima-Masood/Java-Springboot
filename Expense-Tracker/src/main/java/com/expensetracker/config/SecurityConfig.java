@@ -73,25 +73,13 @@ public class SecurityConfig {
                                                    AuthenticationManager authenticationManager) throws Exception {
 
         http
-                .formLogin(config -> config
-                .successHandler((request, response, auth) -> {
-                    jwt = generatejwt(auth, jwtEncoder);
-                    response = generateResponse(response);
-                    response.getWriter().write(getTokenResponse());
-                }))
-
                 .oauth2Login(config -> config
                 .successHandler((request, response, auth) -> {
                     OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) auth;
 
                     String username = oauth2Token.getPrincipal().getAttribute("login");
                     userService.registerOAuthUserIfNeeded(username, authenticationManager);
-
-                    jwt = generatejwt(auth, jwtEncoder);
-                    response = generateResponse(response);
-                    response.getWriter().print(getTokenResponse());
                 }))
-
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(Customizer.withDefaults())
                 )
@@ -151,36 +139,4 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-
-    private Jwt generatejwt(Authentication auth, JwtEncoder jwtEncoder){
-        JwtClaimsSet jwtClaimsSet = JwtClaimsSet.builder()
-                .subject(auth.getName())
-                .expiresAt(Instant.now().plusSeconds(expirySeconds))
-                .build();
-        jwt = jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, jwtClaimsSet));
-
-        return jwt;
-    }
-    public HttpServletResponse generateResponse(HttpServletResponse response){
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.setStatus(HttpStatus.OK.value());
-
-        response.setContentType("application/json");
-
-        Cookie cookie = new Cookie("access_token", jwt.getTokenValue());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge((int) expirySeconds);
-        response.addCookie(cookie);
-
-        return response;
-    }
-
-    public String getTokenResponse() {
-        return "{\"token_type\":\"Bearer\",\"access_token\":\"" + jwt.getTokenValue()
-                + "\",\"expires_in\":" + expirySeconds + "}";
-    }
-
 }
