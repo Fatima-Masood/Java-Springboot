@@ -24,3 +24,11 @@ logging:
       springframework:
         security: DEBUG
         oauth2: DEBUG
+
+management:
+  metrics:
+    export:
+      otlp:
+        enabled: true
+        url: http://localhost:4318/v1/metrics
+

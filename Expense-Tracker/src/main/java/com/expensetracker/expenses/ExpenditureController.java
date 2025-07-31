@@ -60,7 +60,9 @@ public class ExpenditureController {
     @GetMapping
     public ResponseEntity<List<Expenditure>> getExpendituresByUser(Authentication authentication) {
         if (authentication!= null && authentication.getName() != null) {
-            return ResponseEntity.ok(expenditureRepository.findByUser(authentication.getName()));
+            List<Expenditure> data = expenditureRepository.findByUser(authentication.getName());
+            log.info(data.toString());
+            return ResponseEntity.ok(data);
         }
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }

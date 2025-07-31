@@ -7,7 +7,7 @@ async function fetchUser() {
         });
 
         const user = await res.json();
-        console.log(user);
+        localStorage.setItem("username", user);
         document.getElementById('username').textContent = user.username;
         document.getElementById('displayUsername').textContent = user.username;
         document.getElementById('role').textContent = user.role;

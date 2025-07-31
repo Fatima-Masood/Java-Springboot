@@ -52,10 +52,26 @@ function checkAuthStatus() {
 function logout(e) {
     e.preventDefault();
 
-    localStorage.removeItem('authToken');
-    document.cookie = "access_token=; Max-Age=0; path=/; secure; HttpOnly";
-    updateNavbar();
+    fetch("http://localhost:8080/api/users/logout", {
+        credentials: "include"
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Logout failed");
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log(data.message);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('username');
+        updateNavbar();
+    })
+    .catch(error => {
+        console.error("Error during logout:", error);
+    });
 }
+
 
 window.addEventListener('storage', function (e) {
   if (e.key === 'authToken') {

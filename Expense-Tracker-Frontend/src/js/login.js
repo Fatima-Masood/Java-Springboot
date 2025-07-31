@@ -42,7 +42,8 @@ function loginHandler(e) {
     }
   })
   .then(data => {
-    localStorage.setItem("authToken", "true");
+    localStorage.setItem("authToken", data);
+
     window.location.href = '/pages/dashboard.html';
   })
   .catch(error => {
