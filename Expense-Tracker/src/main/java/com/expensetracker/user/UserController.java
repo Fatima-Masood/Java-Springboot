@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.web.bind.annotation.*;
@@ -29,67 +31,40 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Slf4j
 public class UserController {
 
     private final UserRepository userRepository;
     private final ExpenditureRepository expenditureRepository;
     private final PasswordEncoder passwordEncoder;
+    @Autowired
     private final AuthenticationManager authenticationManager;
-    private final UserService userService;
     @Autowired
     private JwtEncoder jwtEncoder;
-
+    private final UserService userService;
 
     @PostMapping("/register")
-    @ResponseStatus (HttpStatus.CREATED)
     public ResponseEntity<?> register(@RequestBody UserDTO userDTO,
                                       HttpServletResponse response) {
 
         if (userDTO.getUsername() == null || userDTO.getPassword() == null)
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
 
-        try {
-            User user = userService.register(userDTO.getUsername(), userDTO.getPassword());
-            return login(user, response);
-
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Not logged in");
-        }
+        String tokenResponse = userService.register(userDTO.getUsername(), userDTO.getPassword(), response, authenticationManager, jwtEncoder);
+        return ResponseEntity.status(HttpStatus.OK).body(tokenResponse);
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User user,
                                    HttpServletResponse response) {
-        if (user.getUsername() == null || user.getPassword() == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
-        }
-
         try {
-            Authentication auth = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
-
-            SecurityContextHolder.getContext().setAuthentication(auth);
-
-            int expirySeconds = 3600;
-
-            JwtClaimsSet claims = JwtClaimsSet.builder()
-                    .subject(user.getUsername())
-                    .expiresAt(Instant.now().plusSeconds(expirySeconds))
-                    .build();
-
-            JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
-            Jwt jwt = jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, claims));
-
-            Cookie cookie = new Cookie("access_token", jwt.getTokenValue());
-            cookie.setHttpOnly(true);
-            cookie.setSecure(false);
-            cookie.setPath("/");
-            cookie.setMaxAge(expirySeconds);
-            response.addCookie(cookie);
-
-            String json = String.format("{\"access_token\":\"%s\", \"expires_in\":%d}", jwt.getTokenValue(), expirySeconds);
-            return ResponseEntity.ok().body(json);
-
+            String tokenResponse;
+            if (user.getUsername() != null && user.getPassword() != null) {
+                tokenResponse = userService.loginUser(user, response, authenticationManager, jwtEncoder);
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
+            }
+            return ResponseEntity.status(HttpStatus.OK).body(tokenResponse);
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid credentials");
         }

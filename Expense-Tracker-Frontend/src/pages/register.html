@@ -8,31 +8,31 @@
     <link rel="stylesheet" href="/css/login.css">
 </head>
 <body style="margin: 0;">
-<div class="container-fluid p-0" style="height: 100vh; width: 100vw; display: flex; flex-direction: column;">
-    <div class="flex-grow-1 d-flex align-items-center">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-md-6 col-lg-5">
-                    <div class="login-card shadow">
-                        <div class="text-center mb-4">
-                            <h2 class="fw-bold">Welcome</h2>
-                            <p class="text-muted">Please enter credentials to register</p>
-                        </div>
-                        <form id="registerForm">
-                            <div class="mb-3">
-                                <label class="form-label">Username</label>
-                                <input type="text" class="form-control" id="username">
-                            </div>
-                            <div class="mb-4">
-                                <label for="password" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password">
-                            </div>
-                            <div class="d-grid mb-3">
-                                <button type="submit" class="btn btn-primary btn-lg">Register</button>
-                            </div>
-                        </form>
-                    </div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="login-card shadow">
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold">Welcome</h2>
+                    <p class="text-muted">Please enter credentials to register</p>
                 </div>
+                <form id="registerForm">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username">
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password">
+                    </div>
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">Register</button>
+                    </div>
+                    <div class="d-grid mb-3">
+                        <a onclick="startOAuthPopup()" class="text-anchor">SignUp with GitHub</a>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

@@ -3,9 +3,12 @@ const serverUri = 'http://localhost:8080';
 async function fetchUser() {
     try {
         const res = await fetch(serverUri + '/api/users', {
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+                    'Content-Type': 'application/json'
+            },
         });
-
+        console.log(res);
         const user = await res.json();
         localStorage.setItem("username", user);
         document.getElementById('username').textContent = user.username;
@@ -13,6 +16,7 @@ async function fetchUser() {
         document.getElementById('role').textContent = user.role;
 
     } catch (err) {
+        alert ("Cannot fetch user");
         console.error('Fetch user failed:', err);
         window.location.href = '/pages/login.html';
     }
@@ -38,8 +42,8 @@ document.getElementById('updatePasswordForm').addEventListener('submit', async f
         });
 
         const text = await res.text();
-        alert(text);
         if (res.ok) {
+            alert ("Password updated!")
             document.getElementById('updatePasswordForm').reset();
         }
     } catch (err) {
@@ -57,9 +61,10 @@ async function deleteAccount() {
         });
 
         const message = await res.text();
-        alert(message);
         if (res.ok) {
             alert("Account Deleted!");
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('username');
             window.location.href = '/pages/login.html';
         }
     } catch (err) {

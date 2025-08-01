@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>OAuth Success</title>
+</head>
+<body>
+
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    if (token) {
+        localStorage.setItem("authToken", token);
+        window.close();
+    }
+
+</script>
+<p>Login successful. You can close this window.</p>
+</body>
+</html>

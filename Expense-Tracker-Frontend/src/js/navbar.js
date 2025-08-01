@@ -11,8 +11,6 @@ function addNavItem(link, label, buttonClass = "customButton") {
 
   a.addEventListener("click", (e) => {
     e.preventDefault();
-    if (buttonClass !== "customButton")
-       logout(e);
 
     const pageArea = document.getElementById("page-area");
     pageArea.innerHTML = "";
@@ -23,7 +21,8 @@ function addNavItem(link, label, buttonClass = "customButton") {
 
     pageArea.appendChild(iframe);
 
-
+    if (buttonClass !== "customButton")
+       logout(e);
   });
 
   li.appendChild(a);

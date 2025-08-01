@@ -1,5 +1,6 @@
 package com.expensetracker.config;
 
+import com.expensetracker.user.User;
 import com.expensetracker.user.UserService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -8,44 +9,32 @@ import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.crypto.spec.SecretKeySpec;
-import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
-
-import static io.opentelemetry.semconv.SemanticAttributes.HttpRequestMethodValues.POST;
 
 @OpenAPIDefinition(info = @Info(title = "Expenditure API", version = "v1"), security = @SecurityRequirement(name = "bearerAuth"))
 @SecurityScheme(name = "bearerAuth", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
@@ -66,6 +55,7 @@ public class SecurityConfig {
     private JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
 
     @Bean
+    @Profile("!test")
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    UserService userService,
                                                    JwtEncoder jwtEncoder,
@@ -73,13 +63,19 @@ public class SecurityConfig {
                                                    AuthenticationManager authenticationManager) throws Exception {
 
         http
-                .oauth2Login(config -> config
-                .successHandler((request, response, auth) -> {
-                    OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) auth;
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/oauth2/authorization/github")
+                        .successHandler((request, response, authentication) -> {
+                            OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
+                            String username = token.getPrincipal().getAttribute("login");
+                            User user = userService.OAuthSignUp(username, authenticationManager);
 
-                    String username = oauth2Token.getPrincipal().getAttribute("login");
-                    userService.registerOAuthUserIfNeeded(username, authenticationManager);
-                }))
+                            Jwt jwt = userService.setJwt(user, jwtEncoder);
+                            String json = userService.setJwtAndResponse(user, jwtEncoder, response, jwt);
+
+                            response.sendRedirect("http://localhost:8000/oauth2/success.html?token=" + jwt);
+                        }))
+
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(Customizer.withDefaults())
                 )

@@ -20,20 +20,23 @@ public class ExpenditureController {
     private final ExpenditureRepository expenditureRepository;
 
     @PostMapping
-    public ResponseEntity<Expenditure> addExpenditure(
+    public ResponseEntity<?> addExpenditure(
             @RequestBody Expenditure exp,
             Authentication authentication) {
+        if (exp.getTitle() == null || exp.getAmount() == 0){
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("incomplete content");
+        }
         if (authentication != null ) {
             exp.setUser(authentication.getName());
             exp = expenditureRepository.save(exp);
             return ResponseEntity.ok(exp);
         }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
     }
 
 
     @PutMapping("/{id}")
-    public ResponseEntity<Expenditure> updateExpenditure(@PathVariable String id,
+    public ResponseEntity<?> updateExpenditure(@PathVariable String id,
                                                          @RequestBody Expenditure exp,
                                                          Authentication authentication) {
         if (exp.getUser().equals(authentication.getName())) {
@@ -44,7 +47,7 @@ public class ExpenditureController {
 
             return ResponseEntity.ok(expenditureRepository.save(existing));
         }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
     }
 
     @DeleteMapping("/{exp}")
@@ -54,17 +57,17 @@ public class ExpenditureController {
             expenditureRepository.deleteById(exp.getId());
             return ResponseEntity.ok("Expenditure deleted");
         }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
     }
 
     @GetMapping
-    public ResponseEntity<List<Expenditure>> getExpendituresByUser(Authentication authentication) {
+    public ResponseEntity<?> getExpendituresByUser(Authentication authentication) {
         if (authentication!= null && authentication.getName() != null) {
             List<Expenditure> data = expenditureRepository.findByUser(authentication.getName());
             log.info(data.toString());
             return ResponseEntity.ok(data);
         }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
     }
 }
 

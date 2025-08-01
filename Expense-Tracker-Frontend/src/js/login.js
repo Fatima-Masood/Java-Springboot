@@ -5,7 +5,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("loginForm").addEventListener("submit", loginHandler);
 });
 
-
 function loginHandler(e) {
   e.preventDefault();
 
@@ -43,11 +42,22 @@ function loginHandler(e) {
   })
   .then(data => {
     localStorage.setItem("authToken", data);
-
     window.location.href = '/pages/dashboard.html';
   })
   .catch(error => {
-    alert(error.message || error);
+    alert("Internal Server Issue");
   });
 
 }
+
+function startOAuthPopup() {
+    const popup = window.open(
+      'http://localhost:8080/oauth2/authorization/github',
+      '_blank',
+      'width=600,height=600'
+    );
+}
+
+
+
+

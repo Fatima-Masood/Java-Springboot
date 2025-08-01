@@ -29,23 +29,33 @@ function registerHandler(e) {
     })
   })
   .then(async response => {
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text);
-    }
+      if (!response) {
+        const text = await response.text();
+        alert ("not ok")
+        throw new Error(text);
+      }
 
-    const contentType = response.headers.get("Content-Type");
-    if (contentType && contentType.includes("application/json")) {
-      return response.json();
-    } else {
-      return response.text();
-    }
-  })
-  .then(data => {
-    window.location.href = '/pages/dashboard.html';
-  })
-  .catch(error => {
-    alert(error.message || error);
-  });
+      const contentType = response.headers.get("Content-Type");
+      if (contentType && contentType.includes("application/json")) {
+        return response.json();
+      } else {
+        return response.text();
+      }
+    })
+    .then(data => {
+      localStorage.setItem("authToken", data || true);
+      window.location.href = '/pages/dashboard.html';
+    })
+    .catch(error => {
+      alert("Internal Server Issue");
+    });
 
 }
+
+function startOAuthPopup() {
+    const popup = window.open(
+      'http://localhost:8080/oauth2/authorization/github',
+      '_blank',
+      'width=600,height=600,noopener,noreferrer'
+    );
+ }

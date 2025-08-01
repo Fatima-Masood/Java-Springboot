@@ -1,6 +1,9 @@
 package com.expensetracker.user;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -8,9 +11,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
+import java.time.Instant;
 import java.util.Collections;
 
 @Service
@@ -44,29 +50,72 @@ public class UserService implements UserDetailsService {
                 .build();
     }
 
-    public void registerOAuthUserIfNeeded(String username, AuthenticationManager authenticationManager) {
+    public User OAuthSignUp(String username, AuthenticationManager authenticationManager) {
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(username));
+        user.setRole("USER");
+
         if (!userRepository.existsByUsername(username)) {
-            User user = new User();
-            user.setUsername(username);
-            user.setPassword(passwordEncoder.encode(username));
-            user.setRole("USER");
-            userRepository.save(user);
+            user = userRepository.save(user);
         }
+
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, username));
         SecurityContextHolder.getContext().setAuthentication(auth);
+        return user;
     }
 
-    public User register(String username, String password) {
+    public String register(String username, String password,
+                           HttpServletResponse response,
+                           AuthenticationManager authenticationManager,
+                           JwtEncoder jwtEncoder) {
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole("USER");
         if (!userRepository.existsByUsername(username)) {
-            User user = new User();
-            user.setUsername(username);
-            user.setPassword(passwordEncoder.encode(password));
-            user.setRole("USER");
-            return userRepository.save(user);
+            userRepository.save(user);
         }
-        else {
-            return authenticate(username, password);
-        }
+        user.setPassword(password);
+        return loginUser(user, response, authenticationManager, jwtEncoder);
+    }
+
+    public String loginUser(User user, HttpServletResponse response,
+                            AuthenticationManager authenticationManager,
+                            JwtEncoder jwtEncoder){
+        Authentication auth = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        Jwt jwt = setJwt(user, jwtEncoder);
+        String json = setJwtAndResponse(user, jwtEncoder, response, jwt);
+        return json;
+    }
+
+    public String setJwtAndResponse(User user, JwtEncoder jwtEncoder,
+                                    HttpServletResponse response, Jwt jwt) {
+        int expirySeconds = 3600;
+
+        Cookie cookie = new Cookie("access_token", jwt.getTokenValue());
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false);
+        cookie.setPath("/");
+        cookie.setMaxAge(expirySeconds);
+        response.addCookie(cookie);
+
+        return String.format("{\"access_token\":\"%s\", \"expires_in\":%d}", jwt.getTokenValue(), expirySeconds);
+    }
+
+    public Jwt setJwt(User user, JwtEncoder jwtEncoder) {
+        int expirySeconds = 3600;
+
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .subject(user.getUsername())
+                .expiresAt(Instant.now().plusSeconds(expirySeconds))
+                .build();
+
+        JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
+        return jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, claims));
     }
 }

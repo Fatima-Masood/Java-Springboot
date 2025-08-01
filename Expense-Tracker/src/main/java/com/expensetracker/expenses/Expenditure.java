@@ -20,6 +20,6 @@ public class Expenditure {
     private String id;
     private String user;
     private String title;
-    private double amount;
+    private double amount = 0;
     private LocalDateTime timestamp = LocalDateTime.now();
 }
