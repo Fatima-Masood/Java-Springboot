@@ -47,7 +47,9 @@ function addExpenditureToDOM(exp) {
     if (confirm("Are you sure you want to delete this expenditure?")) {
       fetch(`${serverUri}/api/expenditures/${exp.id}`, {
         method: "DELETE",
-        credentials: "include"
+        headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(exp)
       })
         .then(res => {
           if (res.ok) li.remove();

@@ -1,14 +1,15 @@
-package com.expensetracker.expenses;
+package com.expensetracker.expenditure;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @CrossOrigin(origins = "http://localhost:8000")
 @RestController
@@ -40,34 +41,45 @@ public class ExpenditureController {
                                                          @RequestBody Expenditure exp,
                                                          Authentication authentication) {
         if (exp.getUser().equals(authentication.getName())) {
-            Expenditure existing = expenditureRepository.findById(id).orElseThrow(() -> new RuntimeException("Expenditure not found"));
+            Optional<Expenditure> existing = expenditureRepository.findById(id);
 
-            existing.setTitle(exp.getTitle());
-            existing.setAmount(exp.getAmount());
+            if (existing.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Does not exist");
+            }
 
-            return ResponseEntity.ok(expenditureRepository.save(existing));
+            Expenditure expenditure = existing.get();
+            expenditure.setTitle(exp.getTitle());
+            expenditure.setAmount(exp.getAmount());
+
+            return ResponseEntity.ok(expenditureRepository.save(expenditure));
         }
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
     }
 
-    @DeleteMapping("/{exp}")
-    public ResponseEntity<String> deleteExpenditure(@PathVariable Expenditure exp,
-                                                    Authentication authentication) {
-        if (exp.getUser().equals(authentication.getName())) {
-            expenditureRepository.deleteById(exp.getId());
-            return ResponseEntity.ok("Expenditure deleted");
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteExpenditure(@PathVariable String id, Authentication authentication) {
+        Optional<Expenditure> existing = expenditureRepository.findById(id);
+        if (existing.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Does not exist");
         }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
+
+        Expenditure exp = existing.get();
+        if (!exp.getUser().equals(authentication.getName())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
+        }
+
+        expenditureRepository.deleteById(id);
+        return ResponseEntity.ok("Expenditure deleted");
     }
 
-    @GetMapping
+
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getExpendituresByUser(Authentication authentication) {
         if (authentication!= null && authentication.getName() != null) {
             List<Expenditure> data = expenditureRepository.findByUser(authentication.getName());
-            log.info(data.toString());
             return ResponseEntity.ok(data);
         }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Login First.");
     }
 }
 

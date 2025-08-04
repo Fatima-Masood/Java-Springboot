@@ -1,12 +1,9 @@
-package com.expensetracker.expenses;
+package com.expensetracker.expenditure;
 
-import com.expensetracker.user.User;
 import lombok.*;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data

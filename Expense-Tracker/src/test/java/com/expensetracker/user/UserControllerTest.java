@@ -1,36 +1,24 @@
-package com.expensetracker;
+package com.expensetracker.user;
 
 import com.expensetracker.config.JwtAuthFilter;
 import com.expensetracker.dto.PasswordUpdateRequest;
 import com.expensetracker.dto.UserDTO;
-import com.expensetracker.expenses.ExpenditureRepository;
-import com.expensetracker.user.User;
-import com.expensetracker.user.UserController;
-import com.expensetracker.user.UserRepository;
-import com.expensetracker.user.UserService;
+import com.expensetracker.expenditure.ExpenditureRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.util.Optional;
 
@@ -49,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Slf4j
 @AutoConfigureMockMvc(addFilters = false)
 
-public class UserApiTests {
+public class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -83,7 +71,9 @@ public class UserApiTests {
     //-------------------
     @Test
     void testRegister_success() throws Exception {
-        UserDTO userDTO = new UserDTO("john", "password123");
+        UserDTO userDTO = new UserDTO();
+        userDTO.setUsername("john");
+        userDTO.setPassword("password123");
         String token = "mock-jwt-token";
 
         when(userService.register(eq("john"), eq("password123"), any(), eq(authenticationManager), eq(jwtEncoder)))
@@ -100,6 +90,10 @@ public class UserApiTests {
     @Test
     void testRegister_incompleteCredentials() throws Exception {
         UserDTO userDTO = new UserDTO(null, "password123");
+        String token = "mock-jwt-token";
+
+        when(userService.register(eq(userDTO.getUsername()), eq(userDTO.getPassword()), any(), eq(authenticationManager), eq(jwtEncoder)))
+                .thenReturn(token);
 
         mockMvc.perform(post("/api/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -186,7 +180,9 @@ public class UserApiTests {
     @Test
     @WithMockUser(username = "ghost")
     void testUpdatePassword_userNotFound() throws Exception {
-        PasswordUpdateRequest req = new PasswordUpdateRequest("any", "new");
+        PasswordUpdateRequest req = new PasswordUpdateRequest();
+        req.setOldPassword("any");
+        req.setNewPassword("new");
 
         when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
