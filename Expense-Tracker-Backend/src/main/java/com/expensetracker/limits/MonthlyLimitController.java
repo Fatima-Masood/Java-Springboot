@@ -17,7 +17,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/expenditures/monthly")
 @Slf4j
-@CrossOrigin(origins = "http://localhost:3000")
 public class MonthlyLimitController {
     @Autowired
     private MonthlyLimitRepository monthlyLimitRepository;

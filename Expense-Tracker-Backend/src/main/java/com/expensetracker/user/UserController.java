@@ -24,7 +24,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/users")
 @Slf4j
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserController {
 
     @Autowired

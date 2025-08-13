@@ -76,10 +76,11 @@ public class SecurityConfig {
                             String json = userService.setJwtAndResponse(user, jwtEncoder, response, jwt);
                         }))
 
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(Customizer.withDefaults()))
 
-                .sessionManagement(config ->
-                config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(config -> config
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(config -> config
                 .requestMatchers(
@@ -92,6 +93,7 @@ public class SecurityConfig {
                         "/target/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/users/login", "/api/users/register").permitAll()
                 .anyRequest().authenticated())
+
 
                 .cors(withDefaults -> {})
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
