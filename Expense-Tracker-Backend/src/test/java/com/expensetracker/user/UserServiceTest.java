@@ -1,16 +1,22 @@
 package com.expensetracker.user;
 
+import com.expensetracker.dto.PasswordUpdateRequest;
+import com.expensetracker.expenditure.ExpenditureRepository;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -18,10 +24,15 @@ import static org.mockito.Mockito.*;
 
 class UserServiceTest {
 
+    @InjectMocks
+    private UserService userService;
+
     @Mock
     private UserRepository userRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private ExpenditureRepository expenditureRepository;
     @Mock
     private AuthenticationManager authenticationManager;
     @Mock
@@ -29,105 +40,200 @@ class UserServiceTest {
     @Mock
     private HttpServletResponse response;
 
-    @InjectMocks
-    private UserService userService;
+    @Captor
+    private ArgumentCaptor<Cookie> cookieCaptor;
 
-    private final User sampleUser = new User("1", "testuser", "encodedpass", "USER");
+    private User mockUser;
 
     @BeforeEach
-    void setup() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockUser = new User();
+        mockUser.setUsername("testuser");
+        mockUser.setPassword("encodedpass");
+        mockUser.setRole("USER");
+
+        // Always return an authenticated Authentication object
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(authenticationManager.authenticate(any())).thenReturn(auth);
     }
 
     @Test
-    void testAuthenticate_Success() {
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(sampleUser));
+    void loadUserByUsername_Found() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(mockUser));
+
+        var userDetails = userService.loadUserByUsername("testuser");
+
+        assertEquals("testuser", userDetails.getUsername());
+        verify(userRepository).findByUsername("testuser");
+    }
+
+    @Test
+    void loadUserByUsername_NotFound() {
+        when(userRepository.findByUsername("missing")).thenReturn(Optional.empty());
+        assertThrows(UsernameNotFoundException.class, () -> userService.loadUserByUsername("missing"));
+    }
+
+    @Test
+    void authenticate_Success() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(mockUser));
         when(passwordEncoder.matches("rawpass", "encodedpass")).thenReturn(true);
 
-        User result = userService.authenticate("testuser", "rawpass");
+        var result = userService.authenticate("testuser", "rawpass");
+        assertEquals(mockUser, result);
+    }
+
+    @Test
+    void authenticate_InvalidPassword() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches("wrong", "encodedpass")).thenReturn(false);
+
+        assertThrows(BadCredentialsException.class, () -> userService.authenticate("testuser", "wrong"));
+    }
+
+    @Test
+    void oAuthSignUp_NewUser() {
+        when(userRepository.existsByUsername("testuser")).thenReturn(false);
+        when(userRepository.save(any())).thenReturn(mockUser);
+
+        var result = userService.OAuthSignUp("testuser", authenticationManager);
         assertEquals("testuser", result.getUsername());
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
-    void testAuthenticate_InvalidPassword() {
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(sampleUser));
-        when(passwordEncoder.matches("wrongpass", "encodedpass")).thenReturn(false);
+    void register_NewUser_CreatesAndLogsIn() {
+        when(userRepository.existsByUsername("testuser")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedpass");
+        when(jwtEncoder.encode(any())).thenReturn(mock(Jwt.class));
 
-        assertThrows(BadCredentialsException.class, () -> {
-            userService.authenticate("testuser", "wrongpass");
-        });
+        var result = userService.register("testuser", "pass", response, authenticationManager, jwtEncoder);
+        assertTrue(result.contains("access_token"));
     }
 
     @Test
-    void testLoadUserByUsername_Success() {
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(sampleUser));
+    void loginUser_SetsSecurityContextAndReturnsToken() {
+        Jwt mockJwt = mock(Jwt.class);
+        when(mockJwt.getTokenValue()).thenReturn("token123");
+        when(jwtEncoder.encode(any())).thenReturn(mockJwt);
 
-        UserDetails details = userService.loadUserByUsername("testuser");
-        assertEquals("testuser", details.getUsername());
+        var result = userService.loginUser("testuser", "pass", response, authenticationManager, jwtEncoder);
+        assertTrue(result.contains("token123"));
     }
 
     @Test
-    void testLoadUserByUsername_NotFound() {
-        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
-
-        assertThrows(UsernameNotFoundException.class, () -> {
-            userService.loadUserByUsername("ghost");
-        });
-    }
-
-    @Test
-    void testOAuthSignUp_NewUser() {
-        when(userRepository.existsByUsername("oauthuser")).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
-        when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-
-        User newUser = userService.OAuthSignUp("oauthuser", authenticationManager);
-        assertEquals("oauthuser", newUser.getUsername());
-    }
-
-    @Test
-    void testRegister_NewUser() {
-        when(userRepository.existsByUsername("newuser")).thenReturn(false);
-        when(passwordEncoder.encode("securepass")).thenReturn("hashed");
-        when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
-
-        Jwt jwt = mock(Jwt.class);
-        when(jwt.getTokenValue()).thenReturn("token123");
-
-        when(jwtEncoder.encode(any())).thenReturn(jwt);
-
-        String json = userService.register("newuser", "securepass", response, authenticationManager, jwtEncoder);
-        assertTrue(json.contains("access_token"));
-    }
-
-    @Test
-    void testLoginUser_ValidCredentials() {
-        when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
+    void setJwtAndResponse_AddsCookie() {
         Jwt jwt = mock(Jwt.class);
         when(jwt.getTokenValue()).thenReturn("abc123");
-        when(jwtEncoder.encode(any())).thenReturn(jwt);
 
-        String token = userService.loginUser(sampleUser, response, authenticationManager, jwtEncoder);
-        assertTrue(token.contains("access_token"));
+        userService.setJwtAndResponse(response, jwt);
+
+        verify(response).addCookie(cookieCaptor.capture());
+        Cookie added = cookieCaptor.getValue();
+        assertEquals("access_token", added.getName());
+        assertEquals("abc123", added.getValue());
     }
 
     @Test
-    void testSetJwtAndResponse_Valid() {
-        Jwt jwt = mock(Jwt.class);
-        when(jwt.getTokenValue()).thenReturn("tok123");
+    void setJwt_ReturnsEncodedJwt() {
+        Jwt expectedJwt = mock(Jwt.class);
+        when(jwtEncoder.encode(any())).thenReturn(expectedJwt);
 
-        String json = userService.setJwtAndResponse(sampleUser, jwtEncoder, response, jwt);
-        assertEquals("{\"access_token\":\"tok123\", \"expires_in\":3600}", json);
+        var result = userService.setJwt("testuser", jwtEncoder);
+        assertEquals(expectedJwt, result);
     }
 
     @Test
-    void testSetJwt_CreatesToken() {
-        JwtEncoder encoder = mock(JwtEncoder.class);
-        Jwt mockJwt = mock(Jwt.class);
-        when(mockJwt.getTokenValue()).thenReturn("jwtToken");
-        when(encoder.encode(any())).thenReturn(mockJwt);
+    void deleteCookie_AddsExpiredCookie() {
+        userService.deleteCookie(response, "access_token");
+        verify(response).addCookie(cookieCaptor.capture());
+        assertEquals(0, cookieCaptor.getValue().getMaxAge());
+    }
 
-        Jwt jwt = userService.setJwt(sampleUser, encoder);
-        assertEquals("jwtToken", jwt.getTokenValue());
+    @Test
+    void deleteUser_UserExists() {
+        SecurityContext context = mock(SecurityContext.class);
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("testuser");
+        when(context.getAuthentication()).thenReturn(auth);
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(mockUser));
+
+        int result = userService.deleteUser();
+        assertEquals(0, result);
+        verify(expenditureRepository).deleteByUser("testuser");
+        verify(userRepository).delete(mockUser);
+    }
+
+    @Test
+    void deleteUser_UserNotFound() {
+        SecurityContext context = mock(SecurityContext.class);
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("testuser");
+        when(context.getAuthentication()).thenReturn(auth);
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
+
+        int result = userService.deleteUser();
+        assertEquals(-1, result);
+    }
+
+    @Test
+    void updatePassword_Success() {
+        SecurityContext context = mock(SecurityContext.class);
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("testuser");
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+
+        PasswordUpdateRequest req = new PasswordUpdateRequest();
+        req.setOldPassword("old");
+        req.setNewPassword("new");
+
+        User mockUser = new User();
+        mockUser.setUsername("testuser");
+        mockUser.setPassword("encodedpass");
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches("old", "encodedpass")).thenReturn(true);
+
+        int result = userService.updatePassword(req);
+
+        assertEquals(0, result);
+        verify(userRepository).save(mockUser);
+    }
+
+
+    @Test
+    void updatePassword_UserNotFound() {
+        SecurityContext context = mock(SecurityContext.class);
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("testuser");
+        when(context.getAuthentication()).thenReturn(auth);
+
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
+
+        int result = userService.updatePassword(new PasswordUpdateRequest());
+        assertEquals(-1, result);
+    }
+
+    @Test
+    void updatePassword_WrongOldPassword() {
+        SecurityContext context = mock(SecurityContext.class);
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("testuser");
+        when(context.getAuthentication()).thenReturn(auth);
+
+
+        PasswordUpdateRequest req = new PasswordUpdateRequest();
+        req.setOldPassword("wrong");
+        req.setNewPassword("new");
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches("wrong", "encodedpass")).thenReturn(false);
+
+        int result = userService.updatePassword(req);
+        assertEquals(1, result);
     }
 }

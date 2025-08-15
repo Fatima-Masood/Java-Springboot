@@ -1,23 +1,27 @@
 package com.expensetracker.user;
 
+import com.expensetracker.dto.PasswordUpdateRequest;
+import com.expensetracker.expenditure.ExpenditureRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Optional;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -26,17 +30,8 @@ public class UserService implements UserDetailsService {
     private UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-    public User authenticate(String username, String rawPassword) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-            throw new BadCredentialsException("Invalid credentials");
-        }
-
-        return user;
-    }
+    @Autowired
+    private ExpenditureRepository expenditureRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -50,15 +45,21 @@ public class UserService implements UserDetailsService {
                 .build();
     }
 
+    public User authenticate(String username, String rawPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        if (!passwordEncoder.matches(rawPassword, user.getPassword()))
+            throw new BadCredentialsException("Invalid credentials");
+        return user;
+    }
+
     public User OAuthSignUp(String username, AuthenticationManager authenticationManager) {
         User user = new User();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(username));
         user.setRole("USER");
-
-        if (!userRepository.existsByUsername(username)) {
+        if (!userRepository.existsByUsername(username))
             user = userRepository.save(user);
-        }
 
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, username));
@@ -74,51 +75,43 @@ public class UserService implements UserDetailsService {
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole("USER");
-        if (!userRepository.existsByUsername(username)) {
-            userRepository.save(user);
-        }
+        if (!userRepository.existsByUsername(username)) userRepository.save(user);
+
         user.setPassword(password);
-        return loginUser(user, response, authenticationManager, jwtEncoder);
+        return loginUser(username, password, response, authenticationManager, jwtEncoder);
     }
 
-    public String loginUser(User user, HttpServletResponse response,
+    public String loginUser(String username, String password,
+                            HttpServletResponse response,
                             AuthenticationManager authenticationManager,
                             JwtEncoder jwtEncoder){
         Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+                new UsernamePasswordAuthenticationToken(username, password));
         SecurityContextHolder.getContext().setAuthentication(auth);
-
-        Jwt jwt = setJwt(user, jwtEncoder);
-        String json = setJwtAndResponse(user, jwtEncoder, response, jwt);
-        return json;
+        Jwt jwt = setJwt(username, jwtEncoder);
+        return setJwtAndResponse(response, jwt);
     }
 
-    public String setJwtAndResponse(User user, JwtEncoder jwtEncoder,
-                                    HttpServletResponse response, Jwt jwt) {
-        int expirySeconds = 3600;
-
+    public String setJwtAndResponse(HttpServletResponse response, Jwt jwt) {
         Cookie cookie = new Cookie("access_token", jwt.getTokenValue());
         cookie.setHttpOnly(true);
         cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setDomain("localhost");
-        cookie.setMaxAge(expirySeconds);
+        cookie.setMaxAge(3600);
         response.addCookie(cookie);
-
-        return String.format("{\"access_token\":\"%s\", \"expires_in\":%d}", jwt.getTokenValue(), expirySeconds);
+        return String.format("{\"access_token\":\"%s\", \"expires_in\":%d}", jwt.getTokenValue(), 3600);
     }
 
-    public Jwt setJwt(User user, JwtEncoder jwtEncoder) {
-        int expirySeconds = 3600;
-
+    public Jwt setJwt(String username, JwtEncoder jwtEncoder) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject(user.getUsername())
-                .expiresAt(Instant.now().plusSeconds(expirySeconds))
+                .subject(username)
+                .expiresAt(Instant.now().plusSeconds(3600))
                 .build();
-
         JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
         return jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, claims));
     }
+
     public void deleteCookie(HttpServletResponse response, String name) {
         Cookie cookie = new Cookie(name, "");
         cookie.setHttpOnly(true);
@@ -129,4 +122,30 @@ public class UserService implements UserDetailsService {
         response.addCookie(cookie);
     }
 
+    @Transactional
+    public int deleteUser() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        if (optionalUser.isEmpty())
+            return -1;
+
+        User user = optionalUser.get();
+        expenditureRepository.deleteByUser(username);
+        userRepository.delete(user);
+        return 0;
+    }
+
+    public int updatePassword(PasswordUpdateRequest passwordUpdateRequest){
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        if (optionalUser.isEmpty()) return -1;
+
+        User user = optionalUser.get();
+        if (!passwordEncoder.matches(passwordUpdateRequest.getOldPassword(), user.getPassword())) return 1;
+
+        user.setPassword(passwordEncoder.encode(passwordUpdateRequest.getNewPassword()));
+        userRepository.save(user);
+        return 0;
+    }
 }

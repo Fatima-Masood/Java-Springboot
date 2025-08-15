@@ -1,5 +1,6 @@
 package com.expensetracker.expenditure;
 
+import com.expensetracker.dto.ExpenditureDTO;
 import com.expensetracker.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -15,13 +16,12 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -35,22 +35,13 @@ class ExpenditureControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private UserRepository userRepository;
-
-    @MockitoBean
-    private ExpenditureRepository expenditureRepository;
+    private ExpenditureService expenditureService;
 
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private AuthenticationManager authenticationManager;
-
-    @MockitoBean
     private Authentication authentication;
-
     private final String mockUsername = "john";
-
 
     @BeforeEach
     void setup() {
@@ -62,9 +53,9 @@ class ExpenditureControllerTest {
     //-------------------------
     @Test
     void testAddExpenditure_Success() throws Exception {
-        Expenditure exp = new Expenditure();
-        exp.setTitle("Lunch");
-        exp.setAmount(15.5);
+        ExpenditureDTO dto = new ExpenditureDTO();
+        dto.setTitle("Lunch");
+        dto.setAmount(15.5);
 
         Expenditure savedExp = new Expenditure();
         savedExp.setId("123");
@@ -72,12 +63,13 @@ class ExpenditureControllerTest {
         savedExp.setAmount(15.5);
         savedExp.setUser(mockUsername);
 
-        Mockito.when(expenditureRepository.save(any())).thenReturn(savedExp);
+        when(expenditureService.addExpenditure(eq(mockUsername), any(ExpenditureDTO.class)))
+                .thenReturn(savedExp);
 
         mockMvc.perform(post("/api/expenditures")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(exp)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Lunch"))
                 .andExpect(jsonPath("$.user").value(mockUsername));
@@ -85,13 +77,26 @@ class ExpenditureControllerTest {
 
     @Test
     void testAddExpenditure_MissingFields() throws Exception {
-        Expenditure exp = new Expenditure();  // no title or amount
+        ExpenditureDTO dto = new ExpenditureDTO();
 
         mockMvc.perform(post("/api/expenditures")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(exp)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testAddExpenditure_ForbiddenWhenNoAuthentication() throws Exception {
+        ExpenditureDTO dto = new ExpenditureDTO();
+        dto.setTitle("Dinner");
+        dto.setAmount(20.0);
+
+        mockMvc.perform(post("/api/expenditures")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Forbidden"));
     }
 
     //------------------------
@@ -99,11 +104,9 @@ class ExpenditureControllerTest {
     //------------------------
     @Test
     void testUpdateExpenditure_Success() throws Exception {
-        Expenditure oldExp = new Expenditure();
-        oldExp.setId("1");
-        oldExp.setUser(mockUsername);
-        oldExp.setTitle("Old Title");
-        oldExp.setAmount(10.0);
+        ExpenditureDTO dto = new ExpenditureDTO();
+        dto.setTitle("New Title");
+        dto.setAmount(20.0);
 
         Expenditure updated = new Expenditure();
         updated.setId("1");
@@ -111,13 +114,13 @@ class ExpenditureControllerTest {
         updated.setTitle("New Title");
         updated.setAmount(20.0);
 
-        Mockito.when(expenditureRepository.findById("1")).thenReturn(Optional.of(oldExp));
-        Mockito.when(expenditureRepository.save(any())).thenReturn(updated);
+        when(expenditureService.updateExpenditure(eq(mockUsername), eq("1"), any(ExpenditureDTO.class)))
+                .thenReturn(Optional.of(updated));
 
         mockMvc.perform(put("/api/expenditures/1")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updated)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("New Title"))
                 .andExpect(jsonPath("$.amount").value(20.0));
@@ -125,33 +128,33 @@ class ExpenditureControllerTest {
 
     @Test
     void testUpdateExpenditure_Forbidden() throws Exception {
-        Expenditure exp = new Expenditure();
-        exp.setId("1");
-        exp.setUser("other_user");
-        exp.setTitle("Test");
-        exp.setAmount(50);
+        ExpenditureDTO dto = new ExpenditureDTO();
+        dto.setTitle("Test");
+        dto.setAmount(50);
 
-        Mockito.when(expenditureRepository.findById("1")).thenReturn(Optional.of(exp));
+        when(expenditureService.updateExpenditure(eq(mockUsername), eq("1"), any(ExpenditureDTO.class)))
+                .thenThrow(new SecurityException("Forbidden"));
 
         mockMvc.perform(put("/api/expenditures/1")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(exp)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void testUpdateExpenditure_Failure() throws Exception {
-        Expenditure exp = new Expenditure();
-        exp.setId("1");
-        exp.setUser(mockUsername);
-        exp.setTitle("Test");
-        exp.setAmount(50);
+    void testUpdateExpenditure_NotFound() throws Exception {
+        ExpenditureDTO dto = new ExpenditureDTO();
+        dto.setTitle("Test");
+        dto.setAmount(50);
+
+        when(expenditureService.updateExpenditure(eq(mockUsername), eq("2"), any(ExpenditureDTO.class)))
+                .thenReturn(Optional.empty());
 
         mockMvc.perform(put("/api/expenditures/2")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(exp)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string("Does not exist"));
     }
@@ -161,47 +164,30 @@ class ExpenditureControllerTest {
     //------------------------
     @Test
     void testDeleteExpenditure_Success() throws Exception {
-        Expenditure exp = new Expenditure();
-        exp.setId("1");
-        exp.setUser(mockUsername);
-
-        when(expenditureRepository.findById("1")).thenReturn(Optional.of(exp));
-        Mockito.doNothing().when(expenditureRepository).deleteById("1");
+        when(expenditureService.deleteExpenditure(eq(mockUsername), eq("1"))).thenReturn(true);
 
         mockMvc.perform(delete("/api/expenditures/1")
-                        .principal(authentication)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(exp)))
+                        .principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Expenditure deleted"));
     }
 
     @Test
     void testDeleteExpenditure_Forbidden() throws Exception {
-        Expenditure exp = new Expenditure();
-        exp.setId("1");
-        exp.setUser("someone_else");
-
-        when(expenditureRepository.findById("1")).thenReturn(Optional.of(exp));
-        Mockito.doNothing().when(expenditureRepository).deleteById("1");
+        when(expenditureService.deleteExpenditure(eq(mockUsername), eq("1")))
+                .thenThrow(new SecurityException("Forbidden"));
 
         mockMvc.perform(delete("/api/expenditures/1")
-                        .principal(authentication)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(exp)))
+                        .principal(authentication))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void testDeleteExpenditure_Failure() throws Exception {
-        Expenditure exp = new Expenditure();
-        exp.setId("1");
-        exp.setUser("someone_else");
+    void testDeleteExpenditure_NotFound() throws Exception {
+        when(expenditureService.deleteExpenditure(eq(mockUsername), eq("2"))).thenReturn(false);
 
         mockMvc.perform(delete("/api/expenditures/2")
-                        .principal(authentication)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(exp)))
+                        .principal(authentication))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string("Does not exist"));
     }
@@ -215,28 +201,22 @@ class ExpenditureControllerTest {
         e1.setId("1");
         e1.setTitle("Milk");
         e1.setAmount(3.0);
-        e1.setUser("john");
+        e1.setUser(mockUsername);
 
-        when(expenditureRepository.findByUser("john")).thenReturn(List.of(e1));
+        when(expenditureService.getExpendituresByUser(mockUsername)).thenReturn(List.of(e1));
 
-        MvcResult result = mockMvc.perform(get("/api/expenditures")
+        mockMvc.perform(get("/api/expenditures")
                         .principal(authentication))
                 .andExpect(status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].title").value("Milk"))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].amount").value(3.0))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].user").value("john"))
-                .andReturn();
+                .andExpect(jsonPath("$[0].title").value("Milk"))
+                .andExpect(jsonPath("$[0].amount").value(3.0))
+                .andExpect(jsonPath("$[0].user").value("john"));
     }
 
     @Test
     void testGetExpendituresByUser_Forbidden() throws Exception {
-        when(expenditureRepository.findByUser("john")).thenReturn(List.of());
-
-        MvcResult result = mockMvc.perform(get("/api/expenditures"))
+        mockMvc.perform(get("/api/expenditures"))
                 .andExpect(status().isForbidden())
-                .andExpect(content().string("Login First."))
-                .andReturn();
+                .andExpect(content().string("Login First."));
     }
-
 }
-

@@ -1,16 +1,11 @@
 package com.expensetracker.config;
 
-import com.expensetracker.expenditure.ExpenditureRepository;
 import com.expensetracker.user.User;
 import com.expensetracker.user.UserService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
-import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,10 +20,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
@@ -36,33 +29,20 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.spec.SecretKeySpec;
-import java.util.Arrays;
 import java.util.List;
 
-@OpenAPIDefinition(info = @Info(title = "Expenditure API", version = "v1"), security = @SecurityRequirement(name = "bearerAuth"))
-@SecurityScheme(name = "bearerAuth", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
+
 @EnableMethodSecurity
 @Configuration
 @Slf4j
-@SecurityScheme(
-        name = "bearerAuth",
-        type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        scheme = "bearer"
-)
-
 public class SecurityConfig {
-
-    private Jwt jwt;
-    private long expirySeconds = 3600;
-    private JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
+    private AuthenticationManager authenticationManager;
 
     @Bean
     @Profile("!test")
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    UserService userService,
-                                                   JwtEncoder jwtEncoder,
-                                                   AuthenticationManager authenticationManager) throws Exception {
+                                                   JwtEncoder jwtEncoder) throws Exception {
 
         http
                 .oauth2Login(oauth2 -> oauth2
@@ -72,8 +52,8 @@ public class SecurityConfig {
                             String username = token.getPrincipal().getAttribute("login");
                             User user = userService.OAuthSignUp(username, authenticationManager);
 
-                            Jwt jwt = userService.setJwt(user, jwtEncoder);
-                            String json = userService.setJwtAndResponse(user, jwtEncoder, response, jwt);
+                            Jwt jwt = userService.setJwt(user.getUsername(), jwtEncoder);
+                            userService.setJwtAndResponse(response, jwt);
                         }))
 
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -93,7 +73,6 @@ public class SecurityConfig {
                         "/target/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/users/login", "/api/users/register").permitAll()
                 .anyRequest().authenticated())
-
 
                 .cors(withDefaults -> {})
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())

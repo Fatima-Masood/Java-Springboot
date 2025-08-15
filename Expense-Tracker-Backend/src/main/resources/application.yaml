@@ -31,7 +31,3 @@ management:
       otlp:
         enabled: true
         url: http://localhost:4318/v1/metrics
-
-dependency-check:
-  apiKey: 1046a6c1-d064-4ebb-98b2-c86ee0722af2
-

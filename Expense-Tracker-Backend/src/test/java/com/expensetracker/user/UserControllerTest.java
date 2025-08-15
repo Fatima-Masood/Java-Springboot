@@ -25,9 +25,9 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -55,13 +55,13 @@ public class UserControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @MockitoBean
-    private AuthenticationManager authenticationManager;
-
-    @MockitoBean
     private UserService userService;
 
     @MockitoBean
     private JwtEncoder jwtEncoder;
+
+    @MockitoBean
+    private AuthenticationManager authenticationManager;
 
     //-------------------
     //---REGISTER USER---
@@ -73,7 +73,7 @@ public class UserControllerTest {
         userDTO.setPassword("password123");
         String token = "mock-jwt-token";
 
-        when(userService.register(eq("john"), eq("password123"), any(), eq(authenticationManager), eq(jwtEncoder)))
+        when(userService.register(eq("john"), eq("password123"), any(), eq(authenticationManager), eq(jwtEncoder) ))
                 .thenReturn(token);
 
         mockMvc.perform(post("/api/users/register")
@@ -109,7 +109,7 @@ public class UserControllerTest {
         user.setUsername("john");
         user.setPassword("password");
 
-        when(userService.loginUser(eq(user), any(), eq(authenticationManager), eq(jwtEncoder)))
+        when(userService.loginUser(eq("john"), eq("password"), any(), eq(authenticationManager), eq(jwtEncoder)))
                 .thenReturn("mock-token");
 
         mockMvc.perform(post("/api/users/login")
@@ -138,55 +138,59 @@ public class UserControllerTest {
     //--UPDATE PASSWORD--
     //-------------------
     @Test
-    @WithMockUser(username = "john")
+    @WithMockUser(username = "user1")
     void testUpdatePassword_success() throws Exception {
-        PasswordUpdateRequest req = new PasswordUpdateRequest("oldPass", "newPass");
-        User user = new User();
-        user.setUsername("john");
-        user.setPassword("encodedOldPass");
+        PasswordUpdateRequest request = new PasswordUpdateRequest();
+        request.setOldPassword("oldPass");
+        request.setNewPassword("newPass");
 
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("oldPass", "encodedOldPass")).thenReturn(true);
-        when(passwordEncoder.encode("newPass")).thenReturn("encodedNewPass");
+        when(userService.updatePassword(any(PasswordUpdateRequest.class))).thenReturn(0);
 
-        mockMvc.perform(put("/api/users")
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/users")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+                        .content(new ObjectMapper().writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Password updated"));
+
+        verify(userService).updatePassword(any(PasswordUpdateRequest.class));
     }
 
     @Test
-    @WithMockUser(username = "john")
-    void testUpdatePassword_wrongOldPassword() throws Exception {
-        PasswordUpdateRequest req = new PasswordUpdateRequest("wrongOld", "newPass");
-        User user = new User();
-        user.setUsername("john");
-        user.setPassword("encodedOldPass");
+    @WithMockUser(username = "user1")
+    void testUpdatePassword_incorrectOldPassword() throws Exception {
+        PasswordUpdateRequest request = new PasswordUpdateRequest();
+        request.setOldPassword("wrongPass");
+        request.setNewPassword("newPass");
 
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("wrongOld", "encodedOldPass")).thenReturn(false);
+        when(userService.updatePassword(any(PasswordUpdateRequest.class))).thenReturn(1);
 
-        mockMvc.perform(put("/api/users")
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/users")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+                        .content(new ObjectMapper().writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Incorrect old password"));
+
+        verify(userService).updatePassword(any(PasswordUpdateRequest.class));
     }
 
     @Test
-    @WithMockUser(username = "ghost")
+    @WithMockUser(username = "user1")
     void testUpdatePassword_userNotFound() throws Exception {
-        PasswordUpdateRequest req = new PasswordUpdateRequest();
-        req.setOldPassword("any");
-        req.setNewPassword("new");
+        PasswordUpdateRequest request = new PasswordUpdateRequest();
+        request.setOldPassword("oldPass");
+        request.setNewPassword("newPass");
 
-        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+        when(userService.updatePassword(any(PasswordUpdateRequest.class))).thenReturn(-1);
 
-        mockMvc.perform(put("/api/users")
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/users")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+                        .content(new ObjectMapper().writeValueAsString(request)))
                 .andExpect(status().isNotFound());
+
+        verify(userService).updatePassword(any(PasswordUpdateRequest.class));
     }
 
     //-------------------
@@ -198,25 +202,29 @@ public class UserControllerTest {
         User user = new User();
         user.setUsername("john");
 
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(user));
+        when(userService.deleteUser()).thenReturn(0);
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/api/users")
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(content().string("User and related expenditures deleted"));
 
-        verify(expenditureRepository).deleteByUser("john");
-        verify(userRepository).delete(user);
+        verify(userService, times(1)).deleteUser();
+        verifyNoInteractions(expenditureRepository, userRepository);
+
     }
 
     @Test
     @WithMockUser(username = "notfound")
     void testDeleteUser_userNotFound() throws Exception {
-        when(userRepository.findByUsername("notfound")).thenReturn(Optional.empty());
+        when(userService.deleteUser()).thenReturn(-1); // Force the "not found" branch
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/api/users")
                         .with(csrf()))
                 .andExpect(status().isNotFound());
+
+        verify(userService, times(1)).deleteUser();
+        verifyNoInteractions(expenditureRepository, userRepository);
     }
 
     //-------------------
@@ -247,6 +255,4 @@ public class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("{\"message\":\"Logged out successfully\"}"));
     }
-
-
 }

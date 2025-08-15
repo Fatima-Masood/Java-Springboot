@@ -16,25 +16,22 @@ import java.util.Optional;
 @RequestMapping("/api/expenditures")
 @Slf4j
 public class ExpenditureController {
+
     @Autowired
-    private ExpenditureRepository expenditureRepository;
+    private ExpenditureService expenditureService;
 
     @PostMapping
-    public ResponseEntity<?> addExpenditure(
-            @RequestBody ExpenditureDTO request,
-            Authentication authentication) {
+    public ResponseEntity<?> addExpenditure(@RequestBody ExpenditureDTO request,
+                                            Authentication authentication) {
 
         if (request.getTitle() == null || request.getAmount() == 0) {
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body("incomplete content");
         }
 
         if (authentication != null) {
-            Expenditure exp = new Expenditure();
-            exp.setTitle(request.getTitle());
-            exp.setAmount(request.getAmount());
-            exp.setUser(authentication.getName());
-            exp = expenditureRepository.save(exp);
-            return ResponseEntity.ok(exp);
+            return ResponseEntity.ok(
+                    expenditureService.addExpenditure(authentication.getName(), request)
+            );
         }
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
@@ -45,48 +42,37 @@ public class ExpenditureController {
                                                @RequestBody ExpenditureDTO dto,
                                                Authentication authentication) {
 
-        Optional<Expenditure> existing = expenditureRepository.findById(id);
-        if (existing.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Does not exist");
-        }
-
-        Expenditure expenditure = existing.get();
-
-        if (!expenditure.getUser().equals(authentication.getName())) {
+        try {
+            Optional<Expenditure> updated = expenditureService.updateExpenditure(authentication.getName(), id, dto);
+            if (updated.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Does not exist");
+            }
+            return ResponseEntity.ok(updated.get());
+        } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
         }
-
-        expenditure.setTitle(dto.getTitle());
-        expenditure.setAmount(dto.getAmount());
-
-        return ResponseEntity.ok(expenditureRepository.save(expenditure));
     }
-
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteExpenditure(@PathVariable String id, Authentication authentication) {
-        Optional<Expenditure> existing = expenditureRepository.findById(id);
-        if (existing.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Does not exist");
-        }
-
-        Expenditure exp = existing.get();
-        if (!exp.getUser().equals(authentication.getName())) {
+    public ResponseEntity<String> deleteExpenditure(@PathVariable String id,
+                                                    Authentication authentication) {
+        try {
+            boolean deleted = expenditureService.deleteExpenditure(authentication.getName(), id);
+            if (!deleted) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Does not exist");
+            }
+            return ResponseEntity.ok("Expenditure deleted");
+        } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
         }
-
-        expenditureRepository.deleteById(id);
-        return ResponseEntity.ok("Expenditure deleted");
     }
-
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getExpendituresByUser(Authentication authentication) {
-        if (authentication!= null && authentication.getName() != null) {
-            List<Expenditure> data = expenditureRepository.findByUser(authentication.getName());
+        if (authentication != null && authentication.getName() != null) {
+            List<Expenditure> data = expenditureService.getExpendituresByUser(authentication.getName());
             return ResponseEntity.ok(data);
         }
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Login First.");
     }
 }
-

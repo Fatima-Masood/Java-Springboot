@@ -1,7 +1,7 @@
 package com.expensetracker.limits;
 
+import com.expensetracker.dto.MonthlySummaryResponse;
 import com.expensetracker.expenditure.Expenditure;
-import com.expensetracker.expenditure.ExpenditureRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -13,10 +13,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.Collections;
-import java.util.Optional;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -31,19 +29,10 @@ class MonthlyLimitControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private MonthlyLimitRepository monthlyLimitRepository;
-
-    @MockitoBean
-    private ExpenditureRepository expenditureRepository;
+    private MonthlyLimitService monthlyLimitService;
 
     @MockitoBean
     private Authentication authentication;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private JwtDecoder jwtDecoder;
 
     @Test
     void testGetMonthlySummary_WithLimit() throws Exception {
@@ -51,20 +40,16 @@ class MonthlyLimitControllerTest {
 
         Expenditure expenditure = new Expenditure();
         expenditure.setAmount(250.0);
-        expenditure.setTimestamp(LocalDateTime.now());
         expenditure.setTitle("Groceries");
 
-        YearMonth ym = YearMonth.of(2024, 8);
-        when(expenditureRepository.findByUserAndTimestampBetween(
-                Mockito.eq("user1"),
-                Mockito.any(),
-                Mockito.any()
-        )).thenReturn(Collections.singletonList(expenditure));
+        MonthlySummaryResponse response = new MonthlySummaryResponse(
+                YearMonth.of(2024, 8),
+                1000.0,
+                250.0,
+                Collections.singletonList(expenditure)
+        );
 
-        MonthlyLimit limit = new MonthlyLimit();
-        limit.setLimitAmount(1000.0);
-        when(monthlyLimitRepository.findByUsernameAndMonth("user1", "2024-08"))
-                .thenReturn(Optional.of(limit));
+        when(monthlyLimitService.getMonthlySummary("user1", 2024, 8)).thenReturn(response);
 
         mockMvc.perform(get("/api/expenditures/monthly/monthly-summary")
                         .param("year", "2024")
@@ -83,19 +68,16 @@ class MonthlyLimitControllerTest {
 
         Expenditure expenditure = new Expenditure();
         expenditure.setAmount(250.0);
-        expenditure.setTimestamp(LocalDateTime.now());
         expenditure.setTitle("Groceries");
 
-        YearMonth ym = YearMonth.of(2024, 8);
-        when(expenditureRepository.findByUserAndTimestampBetween(
-                Mockito.eq("user1"),
-                Mockito.any(),
-                Mockito.any()
-        )).thenReturn(Collections.singletonList(expenditure));
+        MonthlySummaryResponse response = new MonthlySummaryResponse(
+                YearMonth.of(2024, 8),
+                0.0,
+                250.0,
+                Collections.singletonList(expenditure)
+        );
 
-        MonthlyLimit limit = new MonthlyLimit();
-        when(monthlyLimitRepository.findByUsernameAndMonth("user1", "2024-08"))
-                .thenReturn(Optional.of(limit));
+        when(monthlyLimitService.getMonthlySummary("user1", 2024, 8)).thenReturn(response);
 
         mockMvc.perform(get("/api/expenditures/monthly/monthly-summary")
                         .param("year", "2024")
@@ -103,7 +85,7 @@ class MonthlyLimitControllerTest {
                         .principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalSpent").value(250.0))
-                .andExpect(jsonPath("$.limitAmount").value(0))
+                .andExpect(jsonPath("$.limitAmount").value(0.0))
                 .andExpect(jsonPath("$.month").value("2024-08"))
                 .andExpect(jsonPath("$.expenses[0].title").value("Groceries"));
     }
@@ -120,9 +102,8 @@ class MonthlyLimitControllerTest {
     @Test
     void testSetMonthlyLimit_WithAuth_NewLimit() throws Exception {
         when(authentication.getName()).thenReturn("user2");
-
-        when(monthlyLimitRepository.findByUsernameAndMonth("user2", "2025-01"))
-                .thenReturn(Optional.empty());
+        when(monthlyLimitService.setMonthlyLimit("user2", "2025", "01", 750.0))
+                .thenReturn("Monthly limit set successfully");
 
         mockMvc.perform(post("/api/expenditures/monthly/set-limit")
                         .param("year", "2025")
