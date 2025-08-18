@@ -5,7 +5,6 @@ import com.expensetracker.user.UserService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,7 +28,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.spec.SecretKeySpec;
-import java.util.List;
 
 
 @EnableMethodSecurity
@@ -45,38 +43,56 @@ public class SecurityConfig {
                                                    JwtEncoder jwtEncoder) throws Exception {
 
         http
-                .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/oauth2/authorization/github")
+                .formLogin(form -> form
+                        .loginProcessingUrl("/login")
                         .successHandler((request, response, authentication) -> {
-                            OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
-                            String username = token.getPrincipal().getAttribute("login");
-                            User user = userService.OAuthSignUp(username, authenticationManager);
+                            String username = authentication.getName();
+                            Jwt jwt = userService.createJwt(username, jwtEncoder);
+                            userService.setAuthentication(authentication);
+                            response.setStatus(200);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"access_token\": \"" + jwt.getTokenValue() + "\"}");
+                        })
+                        .failureHandler((request, response, exception) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Invalid username or password\"}");
+                        })
+                )
+                .oauth2Login(oauth2 -> oauth2
+                .loginPage("/oauth2/authorization/github")
+                .successHandler((request, response, authentication) -> {
+                    OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
+                    String username = token.getPrincipal().getAttribute("login");
+                    User user = userService.OAuthSignUp(username, authenticationManager);
+                    userService.setAuthentication(authentication);
+                    Jwt jwt = userService.createJwt(user.getUsername(), jwtEncoder);
+                    response.setStatus(200);
+                    response.setContentType("application/json");
 
-                            Jwt jwt = userService.setJwt(user.getUsername(), jwtEncoder);
-                            userService.setJwtAndResponse(response, jwt);
-                        }))
+                    response.getWriter().write("{\"access_token\": \"" + jwt.getTokenValue() + "\"}");
+                }))
 
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(Customizer.withDefaults()))
+            .oauth2ResourceServer(oauth2 -> oauth2
+                    .jwt(Customizer.withDefaults()))
 
-                .sessionManagement(config -> config
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(config -> config
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                .authorizeHttpRequests(config -> config
-                .requestMatchers(
-                        "/error",
-                        "/v3/api-docs/**",
-                        "/swagger-ui/**",
-                        "/swagger-ui.html",
-                        "/favicon.ico",
-                        "/oauth2/**",
-                        "/target/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/users/login", "/api/users/register").permitAll()
-                .anyRequest().authenticated())
-
-                .cors(withDefaults -> {})
-                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()));
+            .authorizeHttpRequests(config -> config
+            .requestMatchers(
+                    "/error",
+                    "/v3/api-docs/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/favicon.ico",
+                    "/oauth2/**",
+                    "/target/**",
+                    "/api/users/login",
+                    "/api/users/register").permitAll()
+            .anyRequest().authenticated())
+            .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                    .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()));
 
         return http.build();
     }
@@ -99,18 +115,5 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
     }
 }

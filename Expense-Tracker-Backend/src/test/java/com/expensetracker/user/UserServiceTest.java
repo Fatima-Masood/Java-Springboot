@@ -13,10 +13,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 
-import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -108,31 +106,8 @@ class UserServiceTest {
         when(passwordEncoder.encode(anyString())).thenReturn("encodedpass");
         when(jwtEncoder.encode(any())).thenReturn(mock(Jwt.class));
 
-        var result = userService.register("testuser", "pass", response, authenticationManager, jwtEncoder);
+        var result = userService.register("testuser", "pass", authenticationManager, jwtEncoder);
         assertTrue(result.contains("access_token"));
-    }
-
-    @Test
-    void loginUser_SetsSecurityContextAndReturnsToken() {
-        Jwt mockJwt = mock(Jwt.class);
-        when(mockJwt.getTokenValue()).thenReturn("token123");
-        when(jwtEncoder.encode(any())).thenReturn(mockJwt);
-
-        var result = userService.loginUser("testuser", "pass", response, authenticationManager, jwtEncoder);
-        assertTrue(result.contains("token123"));
-    }
-
-    @Test
-    void setJwtAndResponse_AddsCookie() {
-        Jwt jwt = mock(Jwt.class);
-        when(jwt.getTokenValue()).thenReturn("abc123");
-
-        userService.setJwtAndResponse(response, jwt);
-
-        verify(response).addCookie(cookieCaptor.capture());
-        Cookie added = cookieCaptor.getValue();
-        assertEquals("access_token", added.getName());
-        assertEquals("abc123", added.getValue());
     }
 
     @Test
@@ -140,7 +115,7 @@ class UserServiceTest {
         Jwt expectedJwt = mock(Jwt.class);
         when(jwtEncoder.encode(any())).thenReturn(expectedJwt);
 
-        var result = userService.setJwt("testuser", jwtEncoder);
+        var result = userService.createJwt("testuser", jwtEncoder);
         assertEquals(expectedJwt, result);
     }
 

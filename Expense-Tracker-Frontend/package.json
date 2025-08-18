@@ -1,20 +1,27 @@
 {
   "name": "expense-tracker-frontend",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "http-server src -c-1 -a localhost -p 8000"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "js-cookie": "^3.0.5",
+    "next": "15.4.6",
+    "next-auth": "^4.24.11",
+    "react": "19.1.0",
+    "react-datepicker": "^8.5.0",
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
-    "http-server": "^14.1.1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "fs": "^0.0.1-security",
-    "yaml": "^2.8.0"
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.6",
+    "tailwindcss": "^4"
   }
 }

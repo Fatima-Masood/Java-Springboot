@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -31,22 +30,8 @@ public class UserController {
         if (userDTO.getUsername() == null || userDTO.getPassword() == null)
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
 
-        String tokenResponse = userService.register(userDTO.getUsername(), userDTO.getPassword(), response, authenticationManager, jwtEncoder);
+        String tokenResponse = userService.register(userDTO.getUsername(), userDTO.getPassword(), authenticationManager, jwtEncoder);
         return ResponseEntity.status(HttpStatus.OK).body(tokenResponse);
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody UserDTO loginRequest,
-                                   HttpServletResponse response) {
-        try {
-            if (loginRequest.getUsername() != null && loginRequest.getPassword() != null) {
-                String tokenResponse = userService.loginUser(loginRequest.getUsername(), loginRequest.getPassword(), response, authenticationManager, jwtEncoder);
-                return ResponseEntity.status(HttpStatus.OK).body(tokenResponse);
-            } else
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid credentials");
-        }
     }
 
     @DeleteMapping

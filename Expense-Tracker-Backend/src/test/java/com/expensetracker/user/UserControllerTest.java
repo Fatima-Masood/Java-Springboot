@@ -73,7 +73,7 @@ public class UserControllerTest {
         userDTO.setPassword("password123");
         String token = "mock-jwt-token";
 
-        when(userService.register(eq("john"), eq("password123"), any(), eq(authenticationManager), eq(jwtEncoder) ))
+        when(userService.register(eq("john"), eq("password123"), eq(authenticationManager), eq(jwtEncoder) ))
                 .thenReturn(token);
 
         mockMvc.perform(post("/api/users/register")
@@ -89,46 +89,12 @@ public class UserControllerTest {
         UserDTO userDTO = new UserDTO(null, "password123");
         String token = "mock-jwt-token";
 
-        when(userService.register(eq(userDTO.getUsername()), eq(userDTO.getPassword()), any(), eq(authenticationManager), eq(jwtEncoder)))
+        when(userService.register(eq(userDTO.getUsername()), eq(userDTO.getPassword()), eq(authenticationManager), eq(jwtEncoder)))
                 .thenReturn(token);
 
         mockMvc.perform(post("/api/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userDTO))
-                        .with(csrf()))
-                .andExpect(status().isForbidden())
-                .andExpect(content().string("Incomplete credentials"));
-    }
-
-    //-------------------
-    //-----LOGIN USER----
-    //-------------------
-    @Test
-    void testLogin_success() throws Exception {
-        User user = new User();
-        user.setUsername("john");
-        user.setPassword("password");
-
-        when(userService.loginUser(eq("john"), eq("password"), any(), eq(authenticationManager), eq(jwtEncoder)))
-                .thenReturn("mock-token");
-
-        mockMvc.perform(post("/api/users/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(user))
-                        .with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(content().string("mock-token"));
-    }
-
-    @Test
-    void testLogin_incompleteCredentials() throws Exception {
-        User user = new User();
-        user.setUsername(null);
-        user.setPassword("pass");
-
-        mockMvc.perform(post("/api/users/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(user))
                         .with(csrf()))
                 .andExpect(status().isForbidden())
                 .andExpect(content().string("Incomplete credentials"));

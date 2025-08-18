@@ -16,7 +16,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 class SecurityConfigTest {
@@ -37,17 +38,6 @@ class SecurityConfigTest {
         assertNotNull(chain);
     }
 
-
-    @Test
-    void testPasswordEncoderBean() {
-        PasswordEncoder encoder = securityConfig.passwordEncoder();
-        String raw = "mypassword";
-        String encoded = encoder.encode(raw);
-
-        assertNotNull(encoded);
-        assertTrue(encoder.matches(raw, encoded));
-    }
-
     @Test
     void testJwtEncoderAndDecoderWork() {
         byte[] key = "12345678901234567890123456789012".getBytes();
@@ -59,6 +49,16 @@ class SecurityConfigTest {
     }
 
     @Test
+    void testPasswordEncoderBean() {
+        PasswordEncoder encoder = securityConfig.passwordEncoder();
+        String raw = "mypassword";
+        String encoded = encoder.encode(raw);
+
+        assertNotNull(encoded);
+        assertTrue(encoder.matches(raw, encoded));
+    }
+    @Test
+
     void testAuthenticationManagerBean() throws Exception {
         AuthenticationConfiguration mockConfig = mock(AuthenticationConfiguration.class);
         AuthenticationManager mockManager = mock(AuthenticationManager.class);

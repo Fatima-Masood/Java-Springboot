@@ -60,50 +60,32 @@ public class UserService implements UserDetailsService {
         user.setRole("USER");
         if (!userRepository.existsByUsername(username))
             user = userRepository.save(user);
-
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, username));
-        SecurityContextHolder.getContext().setAuthentication(auth);
         return user;
     }
 
     public String register(String username, String password,
-                           HttpServletResponse response,
                            AuthenticationManager authenticationManager,
                            JwtEncoder jwtEncoder) {
-        User user = new User();
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRole("USER");
-        if (!userRepository.existsByUsername(username)) userRepository.save(user);
 
-        user.setPassword(password);
-        return loginUser(username, password, response, authenticationManager, jwtEncoder);
-    }
-
-    public String loginUser(String username, String password,
-                            HttpServletResponse response,
-                            AuthenticationManager authenticationManager,
-                            JwtEncoder jwtEncoder){
+        if (!userRepository.existsByUsername(username)) {
+            User user = new User();
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode(password));
+            user.setRole("USER");
+            userRepository.save(user);
+        }
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, password));
         SecurityContextHolder.getContext().setAuthentication(auth);
-        Jwt jwt = setJwt(username, jwtEncoder);
-        return setJwtAndResponse(response, jwt);
+        Jwt jwt = createJwt(username, jwtEncoder);
+        return "{\"access_token\": \"" + jwt.getTokenValue() + "\"}";
     }
 
-    public String setJwtAndResponse(HttpServletResponse response, Jwt jwt) {
-        Cookie cookie = new Cookie("access_token", jwt.getTokenValue());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setDomain("localhost");
-        cookie.setMaxAge(3600);
-        response.addCookie(cookie);
-        return String.format("{\"access_token\":\"%s\", \"expires_in\":%d}", jwt.getTokenValue(), 3600);
+    public void setAuthentication(Authentication auth){
+        SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
-    public Jwt setJwt(String username, JwtEncoder jwtEncoder) {
+    public Jwt createJwt(String username, JwtEncoder jwtEncoder) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(username)
                 .expiresAt(Instant.now().plusSeconds(3600))
