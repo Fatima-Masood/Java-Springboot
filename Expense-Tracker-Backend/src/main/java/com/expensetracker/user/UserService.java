@@ -5,6 +5,7 @@ import com.expensetracker.expenditure.ExpenditureRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +15,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
@@ -32,6 +35,10 @@ public class UserService implements UserDetailsService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private ExpenditureRepository expenditureRepository;
+    @Autowired
+    private JwtEncoder jwtEncoder;
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -53,19 +60,28 @@ public class UserService implements UserDetailsService {
         return user;
     }
 
-    public User OAuthSignUp(String username, AuthenticationManager authenticationManager) {
-        User user = new User();
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(username));
-        user.setRole("USER");
-        if (!userRepository.existsByUsername(username))
-            user = userRepository.save(user);
-        return user;
+    public String OAuthSignUp(Authentication authentication) {
+        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+        String email = oAuth2User.getAttribute("login");
+        if (email == null) {
+            throw new RuntimeException("Email not found in OAuth2 user attributes");
+        }
+
+        userRepository.findByUsername(email)
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setUsername(email);
+                    newUser.setPassword(passwordEncoder.encode(email));
+                    newUser.setRole("USER");
+                    return userRepository.save(newUser);
+                });
+
+        Jwt jwt = createJwt(email);
+        return frontendUrl + "/oauth2/redirect?token=" + jwt.getTokenValue();
     }
 
     public String register(String username, String password,
-                           AuthenticationManager authenticationManager,
-                           JwtEncoder jwtEncoder) {
+                           AuthenticationManager authenticationManager) {
 
         if (!userRepository.existsByUsername(username)) {
             User user = new User();
@@ -77,7 +93,7 @@ public class UserService implements UserDetailsService {
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, password));
         SecurityContextHolder.getContext().setAuthentication(auth);
-        Jwt jwt = createJwt(username, jwtEncoder);
+        Jwt jwt = createJwt(username);
         return "{\"access_token\": \"" + jwt.getTokenValue() + "\"}";
     }
 
@@ -85,7 +101,7 @@ public class UserService implements UserDetailsService {
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
-    public Jwt createJwt(String username, JwtEncoder jwtEncoder) {
+    public Jwt createJwt(String username) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(username)
                 .expiresAt(Instant.now().plusSeconds(3600))
@@ -99,7 +115,6 @@ public class UserService implements UserDetailsService {
         cookie.setHttpOnly(true);
         cookie.setSecure(true);
         cookie.setPath("/");
-        cookie.setDomain("/");
         cookie.setMaxAge(0);
         response.addCookie(cookie);
     }

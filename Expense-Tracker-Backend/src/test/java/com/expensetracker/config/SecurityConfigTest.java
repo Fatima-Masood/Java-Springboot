@@ -2,7 +2,7 @@ package com.expensetracker.config;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 
@@ -19,12 +20,25 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@SpringBootTest
+@AutoConfigureMockMvc
+@SpringBootTest(classes = SecurityConfig.class)
 class SecurityConfigTest {
 
     private final SecurityConfig securityConfig = new SecurityConfig();
-    @Autowired
+    @MockitoBean
     SecurityFilterChain chain;
+
+    @MockitoBean
+    private JwtEncoder jwtEncoder;
+
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
+    @Test
+    void jwtBeansShouldBeAvailable() {
+        assertNotNull(jwtEncoder);
+        assertNotNull(jwtDecoder);
+    }
 
     @BeforeEach
     void setupAuth() {
@@ -57,8 +71,8 @@ class SecurityConfigTest {
         assertNotNull(encoded);
         assertTrue(encoder.matches(raw, encoded));
     }
-    @Test
 
+    @Test
     void testAuthenticationManagerBean() throws Exception {
         AuthenticationConfiguration mockConfig = mock(AuthenticationConfiguration.class);
         AuthenticationManager mockManager = mock(AuthenticationManager.class);

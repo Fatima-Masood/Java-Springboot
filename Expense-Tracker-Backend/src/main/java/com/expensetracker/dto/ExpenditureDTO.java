@@ -10,4 +10,5 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class ExpenditureDTO {
         private String title;
         private double amount;
+        private String yearMonth;
 }

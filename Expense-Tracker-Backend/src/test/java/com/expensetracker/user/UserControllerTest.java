@@ -13,7 +13,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -21,15 +20,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-import java.util.Optional;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,9 +47,6 @@ public class UserControllerTest {
     private ExpenditureRepository expenditureRepository;
 
     @MockitoBean
-    private PasswordEncoder passwordEncoder;
-
-    @MockitoBean
     private UserService userService;
 
     @MockitoBean
@@ -73,7 +65,7 @@ public class UserControllerTest {
         userDTO.setPassword("password123");
         String token = "mock-jwt-token";
 
-        when(userService.register(eq("john"), eq("password123"), eq(authenticationManager), eq(jwtEncoder) ))
+        when(userService.register(eq("john"), eq("password123"), eq(authenticationManager)))
                 .thenReturn(token);
 
         mockMvc.perform(post("/api/users/register")
@@ -89,7 +81,7 @@ public class UserControllerTest {
         UserDTO userDTO = new UserDTO(null, "password123");
         String token = "mock-jwt-token";
 
-        when(userService.register(eq(userDTO.getUsername()), eq(userDTO.getPassword()), eq(authenticationManager), eq(jwtEncoder)))
+        when(userService.register(eq(userDTO.getUsername()), eq(userDTO.getPassword()), eq(authenticationManager)))
                 .thenReturn(token);
 
         mockMvc.perform(post("/api/users/register")

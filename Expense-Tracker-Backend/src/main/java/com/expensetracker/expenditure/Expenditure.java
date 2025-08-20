@@ -18,6 +18,7 @@ public class Expenditure {
     private String user;
     private String title;
     private double amount = 0;
+    private String yearMonth;
     private LocalDateTime timestamp = LocalDateTime.now();
 
     public Expenditure(Expenditure expenditure) {
@@ -26,9 +27,9 @@ public class Expenditure {
             this.user = expenditure.user;
             this.title = expenditure.title;
             this.amount = expenditure.amount;
-            this.timestamp = expenditure.timestamp;
+            this.yearMonth = expenditure.yearMonth;
         }
+        this.timestamp = LocalDateTime.now();
+
     }
-
-
 }

@@ -6,7 +6,6 @@ import com.expensetracker.expenditure.ExpenditureRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -17,14 +16,12 @@ public class MonthlyLimitService {
     @Autowired
     private ExpenditureRepository expenditureRepository;
 
-    public String setMonthlyLimit(String username, String year, String month, double limit) {
-        String yearMonth = year + '-' + month;
-
-        MonthlyLimit monthlyLimit = monthlyLimitRepository.findByUsernameAndMonth(username, yearMonth)
+    public String setMonthlyLimit(String username, YearMonth yearMonth, double limit) {
+        MonthlyLimit monthlyLimit = monthlyLimitRepository.findByUsernameAndYearMonth(username, yearMonth.toString())
                 .orElse(new MonthlyLimit());
 
         monthlyLimit.setUsername(username);
-        monthlyLimit.setMonth(yearMonth);
+        monthlyLimit.setYearMonth(yearMonth.toString());
         monthlyLimit.setLimitAmount(limit);
 
         monthlyLimitRepository.save(monthlyLimit);
@@ -32,25 +29,19 @@ public class MonthlyLimitService {
         return "Monthly limit set successfully";
     }
 
-    public MonthlySummaryResponse getMonthlySummary(String username, int year, int month) {
-        YearMonth yearMonth = YearMonth.of(year, month);
-
-        LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
-        LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
-        List<Expenditure> monthlyExpenses = expenditureRepository.findByUserAndTimestampBetween(
-                username, start, end);
+    public MonthlySummaryResponse getMonthlySummary(String username, YearMonth yearMonth) {
+        List<Expenditure> monthlyExpenses = expenditureRepository.findByUserAndYearMonth(username, yearMonth.toString());
 
         double totalSpent = monthlyExpenses.stream()
                 .mapToDouble(Expenditure::getAmount)
                 .sum();
 
-        MonthlyLimit monthlyLimit = monthlyLimitRepository.findByUsernameAndMonth(username, yearMonth.toString())
-                .orElse(null);
+        double limit = monthlyLimitRepository.findByUsernameAndYearMonth(username, yearMonth.toString())
+                .map(MonthlyLimit::getLimitAmount)
+                .orElse(0.0);
 
-        return new MonthlySummaryResponse(yearMonth,
-                monthlyLimit != null ? monthlyLimit.getLimitAmount() : 0,
-                totalSpent,
-                monthlyExpenses);
+        return new MonthlySummaryResponse(yearMonth.toString(), limit, totalSpent, monthlyExpenses);
     }
+
 }
 

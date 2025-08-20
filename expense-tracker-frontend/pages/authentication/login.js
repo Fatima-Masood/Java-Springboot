@@ -1,5 +1,5 @@
   import { useRouter } from "next/router";
-  import { useEffect, useState, useContext } from "react";
+  import { useEffect, useState } from "react";
   import Cookies from "js-cookie";
 
   export default function Login() {
@@ -7,15 +7,30 @@
     const [password, setPassword] = useState("");
     const router = useRouter();
     const [csrfToken, setCsrfToken] = useState("");
+    const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
-        const csrfToken = Cookies.get("XSRF-TOKEN");
-        setCsrfToken(csrfToken);
+      const updateTheme = () => {
+        const currentTheme = localStorage.getItem("theme") || "dark";
+        setIsDark(currentTheme === "dark");
+      };
+
+      window.addEventListener("theme-changed", updateTheme);
+      updateTheme();
+
+      return () => {
+        window.removeEventListener("theme-changed", updateTheme);
+      };
+    }, []);
+
+    useEffect(() => {
+      const csrf = Cookies.get("XSRF-TOKEN");
+      setCsrfToken(csrf);
     }, []);
 
     const handleSubmit = async (e) => {
       e.preventDefault();
-      
+
       try {
         const params = new URLSearchParams();
         params.append("username", username);
@@ -27,8 +42,8 @@
             "Content-Type": "application/x-www-form-urlencoded",
             "X-XSRF-TOKEN": csrfToken,
           },
-          body: params.toString(), 
-          credentials: "include", 
+          body: params.toString(),
+          credentials: "include",
         });
 
         if (response.ok) {
@@ -44,36 +59,88 @@
         console.error("Login error:", error);
         alert("An error occurred while logging in. Please try again.");
       }
-
-
     };
 
+    const startOAuthPopup = () => {
+      window.location.href = "../oauth2/authorization/github";      
+    };
+
+    const theme = isDark
+      ? {
+          bg: "bg-gradient-to-br from-[#2a3243] to-[#232b3e]",
+          card: "bg-[#434b5e] text-gray-200",
+          input: "bg-[#1a2233] border-gray-700 text-gray-100 placeholder-gray-400 focus:ring-blue-700",
+          label: "text-gray-300",
+          button: "bg-blue-900 hover:bg-blue-800 text-gray-100",
+          divider: "border-gray-700",
+          oauth: "bg-gray-800 hover:bg-gray-700 text-gray-100",
+          or: "text-gray-400",
+        }
+      : {
+          bg: "bg-lightGray-100",
+          card: "bg-white text-gray-900",
+          input: "bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-400",
+          label: "text-gray-700",
+          button: "bg-blue-700 hover:bg-blue-800 text-white",
+          divider: "border-gray-300",
+          oauth: "bg-gray-900 hover:bg-gray-800 text-white",
+          or: "text-gray-400",
+        };
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-          <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-          <form onSubmit={handleSubmit}>
-            <input
-              className="w-full px-4 py-2 mb-4 border rounded"
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-            <input
-              className="w-full px-4 py-2 mb-4 border rounded"
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+      <div className={`min-h-screen flex items-center justify-center ${theme.bg} transition-colors pb-12`}>
+        <div className={`p-10 rounded-2xl shadow-2xl w-full max-w-md ${theme.card} transition-colors`}>
+          <h2 className="text-3xl font-extrabold mb-8 text-center" style={isDark ? { color: "#7da0d6" } : { color: "#3b5998" }}>
+            Login to Expense Tracker
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className={`block mb-1 font-medium ${theme.label}`} htmlFor="username">
+                Username
+              </label>
+              <input
+                id="username"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition ${theme.input}`}
+                type="text"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoComplete="username"
+              />
+            </div>
+            <div>
+              <label className={`block mb-1 font-medium ${theme.label}`} htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition ${theme.input}`}
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </div>
             <button
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+              className={`w-full py-2 rounded-lg font-semibold transition ${theme.button}`}
               type="submit"
             >
               Login
+            </button>
+            <div className="flex items-center my-4">
+              <div className={`flex-grow border-t ${theme.divider}`}></div>
+              <span className={`mx-3 text-sm ${theme.or}`}>or</span>
+              <div className={`flex-grow border-t ${theme.divider}`}></div>
+            </div>
+            <button
+              className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg font-semibold transition ${theme.oauth}`}
+              onClick={startOAuthPopup}
+              type="button"
+            >
+              Login with GitHub
             </button>
           </form>
         </div>

@@ -15,6 +15,6 @@ public class MonthlyLimit {
     @Id
     private String id;
     private String username;
-    private String month;
+    private String yearMonth;
     private double limitAmount;
 }

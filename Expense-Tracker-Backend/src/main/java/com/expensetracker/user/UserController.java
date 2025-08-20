@@ -9,7 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,8 +17,6 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-    @Autowired
-    private JwtEncoder jwtEncoder;
     @Autowired
     private AuthenticationManager authenticationManager;
 
@@ -30,7 +27,7 @@ public class UserController {
         if (userDTO.getUsername() == null || userDTO.getPassword() == null)
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incomplete credentials");
 
-        String tokenResponse = userService.register(userDTO.getUsername(), userDTO.getPassword(), authenticationManager, jwtEncoder);
+        String tokenResponse = userService.register(userDTO.getUsername(), userDTO.getPassword(), authenticationManager);
         return ResponseEntity.status(HttpStatus.OK).body(tokenResponse);
     }
 

@@ -10,7 +10,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +30,7 @@ class MonthlyLimitServiceTest {
     private MonthlyLimitService monthlyLimitService;
 
     private final String mockUser = "john";
-
+    private final YearMonth yearMonth = YearMonth.of(2025, 8);
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -42,24 +41,25 @@ class MonthlyLimitServiceTest {
     //-------------------------
     @Test
     void testSetMonthlyLimit_NewLimit() {
-        when(monthlyLimitRepository.findByUsernameAndMonth(eq(mockUser), eq("2025-08")))
+
+        when(monthlyLimitRepository.findByUsernameAndYearMonth(eq(mockUser), eq(yearMonth.toString())))
                 .thenReturn(Optional.empty());
 
         MonthlyLimit saved = new MonthlyLimit();
         saved.setUsername(mockUser);
-        saved.setMonth("2025-08");
+        saved.setYearMonth(yearMonth.toString());
         saved.setLimitAmount(500);
 
         when(monthlyLimitRepository.save(any(MonthlyLimit.class))).thenReturn(saved);
 
-        String result = monthlyLimitService.setMonthlyLimit(mockUser, "2025", "08", 500);
+        String result = monthlyLimitService.setMonthlyLimit(mockUser, yearMonth, 500);
 
         assertEquals("Monthly limit set successfully", result);
 
         ArgumentCaptor<MonthlyLimit> captor = ArgumentCaptor.forClass(MonthlyLimit.class);
         verify(monthlyLimitRepository).save(captor.capture());
         assertEquals(mockUser, captor.getValue().getUsername());
-        assertEquals("2025-08", captor.getValue().getMonth());
+        assertEquals(yearMonth.toString(), captor.getValue().getYearMonth());
         assertEquals(500, captor.getValue().getLimitAmount());
     }
 
@@ -67,13 +67,13 @@ class MonthlyLimitServiceTest {
     void testSetMonthlyLimit_UpdateExisting() {
         MonthlyLimit existing = new MonthlyLimit();
         existing.setUsername(mockUser);
-        existing.setMonth("2025-08");
+        existing.setYearMonth(yearMonth.toString());
         existing.setLimitAmount(300);
 
-        when(monthlyLimitRepository.findByUsernameAndMonth(eq(mockUser), eq("2025-08")))
+        when(monthlyLimitRepository.findByUsernameAndYearMonth(eq(mockUser), eq(yearMonth.toString())))
                 .thenReturn(Optional.of(existing));
 
-        monthlyLimitService.setMonthlyLimit(mockUser, "2025", "08", 800);
+        monthlyLimitService.setMonthlyLimit(mockUser, yearMonth, 800);
 
         verify(monthlyLimitRepository).save(existing);
         assertEquals(800, existing.getLimitAmount());
@@ -84,27 +84,24 @@ class MonthlyLimitServiceTest {
     //-------------------------
     @Test
     void testGetMonthlySummary_WithLimitAndExpenses() {
-        int year = 2025, month = 8;
-        YearMonth ym = YearMonth.of(year, month);
-
         Expenditure e1 = new Expenditure();
         e1.setAmount(100);
         Expenditure e2 = new Expenditure();
         e2.setAmount(50);
         List<Expenditure> expenses = List.of(e1, e2);
 
-        when(expenditureRepository.findByUserAndTimestampBetween(
-                eq(mockUser), any(LocalDateTime.class), any(LocalDateTime.class)))
+        when(expenditureRepository.findByUserAndYearMonth(
+                eq(mockUser), eq(yearMonth.toString())))
                 .thenReturn(expenses);
 
         MonthlyLimit limit = new MonthlyLimit();
         limit.setLimitAmount(500);
-        when(monthlyLimitRepository.findByUsernameAndMonth(eq(mockUser), eq(ym.toString())))
+        when(monthlyLimitRepository.findByUsernameAndYearMonth(eq(mockUser), eq(yearMonth.toString())))
                 .thenReturn(Optional.of(limit));
 
-        MonthlySummaryResponse response = monthlyLimitService.getMonthlySummary(mockUser, year, month);
+        MonthlySummaryResponse response = monthlyLimitService.getMonthlySummary(mockUser, yearMonth);
 
-        assertEquals(ym, response.getMonth());
+        assertEquals("2025-08", response.getYearMonth());
         assertEquals(500, response.getLimitAmount());
         assertEquals(150, response.getTotalSpent());
         assertEquals(2, response.getExpenses().size());
@@ -112,17 +109,14 @@ class MonthlyLimitServiceTest {
 
     @Test
     void testGetMonthlySummary_NoLimit_NoExpenses() {
-        int year = 2025, month = 8;
-        YearMonth ym = YearMonth.of(year, month);
-
-        when(expenditureRepository.findByUserAndTimestampBetween(
-                eq(mockUser), any(LocalDateTime.class), any(LocalDateTime.class)))
+        when(expenditureRepository.findByUserAndYearMonth(
+                eq(mockUser), eq(yearMonth.toString())))
                 .thenReturn(List.of());
 
-        when(monthlyLimitRepository.findByUsernameAndMonth(eq(mockUser), eq(ym.toString())))
+        when(monthlyLimitRepository.findByUsernameAndYearMonth(eq(mockUser), eq(yearMonth.toString())))
                 .thenReturn(Optional.empty());
 
-        MonthlySummaryResponse response = monthlyLimitService.getMonthlySummary(mockUser, year, month);
+        MonthlySummaryResponse response = monthlyLimitService.getMonthlySummary(mockUser, yearMonth);
 
         assertEquals(0, response.getLimitAmount());
         assertEquals(0, response.getTotalSpent());

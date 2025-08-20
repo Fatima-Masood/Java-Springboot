@@ -4,20 +4,19 @@ import com.expensetracker.expenditure.Expenditure;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
 @Getter
 @Setter
 public class MonthlySummaryResponse {
-    private YearMonth month;
+    private String yearMonth;
     private double limitAmount;
     private double totalSpent;
     private List<Expenditure> expenses = new ArrayList<>();
 
-    public MonthlySummaryResponse(YearMonth month, double v, double v1, List<Expenditure> expenses) {
-        setMonth(month);
+    public MonthlySummaryResponse(String month, double v, double v1, List<Expenditure> expenses) {
+        setYearMonth(month);
         setLimitAmount(v);
         setTotalSpent(v1);
         setExpenses(expenses);

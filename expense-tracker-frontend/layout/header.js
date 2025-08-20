@@ -47,20 +47,20 @@ export default function Header(props) {
     }`;
 
     const navButtonClass =
-        "px-6 py-3 rounded-lg font-semibold text-lg transition-all duration-300 shadow-md hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2";
+        "px-3 py-2 rounded-lg font-semibold text-md transition-all duration-300 shadow-md hover:shadow-xl focus:outline-none focus:ring-3 focus:ring-gray-400";
 
-    const blueButton = `${navButtonClass} bg-blue-600 text-white hover:bg-blue-500 transform hover:scale-105`;
+    const blueButton = `${navButtonClass} bg-blue-600 text-white hover:bg-blue-600 transform hover:scale-105`;
     const grayButton = `${navButtonClass} ${
         darkMode
             ? "bg-gray-700 text-white hover:bg-gray-600"
             : "bg-gray-600 text-white hover:bg-gray-500"
     } transform hover:scale-105`;
-    const redButton = `${navButtonClass} bg-red-600 text-white hover:bg-red-500 transform hover:scale-105`;
+    const redButton = `${navButtonClass} bg-red-700 text-white hover:bg-red-500 transform hover:scale-105`;
 
     return (
         <header className={headerClass}>
-            <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-tr from-blue-400 via-blue-500 to-blue-700 rounded-full w-14 h-8 flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-2">
+                <div className="bg-gradient-to-tr from-blue-400 via-blue-500 to-blue-700 rounded-full w-12 h-8 flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300">
                     <svg
                         className="w-8 h-6 text-white"
                         fill="none"
@@ -76,15 +76,15 @@ export default function Header(props) {
                     </svg>
                 </div>
                 <Link
-                    href={token ? "/user/dashboard" : "/authentication/login"}
-                    className="text-4xl font-extrabold tracking-wider bg-gradient-to-r from-gray-400 via-blue-400 to-blue-600 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300"
-                    style={{ letterSpacing: "0.1em" }}
+                    href="/"
+                    className="text-3xl font-extrabold tracking-wider bg-gradient-to-r from-gray-400 via-blue-400 to-blue-600 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300"
+                    style={{ letterSpacing: "0.05em" }}
                 >
                     Expense Tracker
                 </Link>
             </div>
             <nav className="w-full sm:w-auto">
-                <ul className="flex flex-wrap justify-center gap-4 items-center">
+                <ul className="flex flex-wrap justify-center gap-3 items-center">
                     {!token ? (
                         <>
                             <li>
@@ -140,13 +140,11 @@ export default function Header(props) {
                     <li>
                         <label className="flex items-center cursor-pointer select-none">
                             <span
-                                className={`mr-3 text-lg font-medium ${
-                                    darkMode ? "text-gray-200" : "text-gray-700"
-                                }`}
+                                className={`mr-3 text-sm font-medium font-semibold text-gray-400`}
                             >
                                 {darkMode ? "Dark" : "Light"}
                             </span>
-                            <div className="relative">
+                            <div className="relative w-10 h-5">
                                 <input
                                     type="checkbox"
                                     checked={darkMode}
@@ -155,14 +153,14 @@ export default function Header(props) {
                                     aria-label="Toggle dark mode"
                                 />
                                 <div
-                                    className={`block w-14 h-8 rounded-full transition-colors ${
+                                    className={`block w-12 h-6 rounded-full transition-colors duration-200 ${
                                         darkMode ? "bg-gray-700" : "bg-gray-300"
                                     }`}
                                 ></div>
                                 <div
-                                    className={`dot absolute left-1 top-1 w-6 h-6 rounded-full transition-transform duration-200 ${
+                                    className={`absolute top-1 left-1 w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
                                         darkMode
-                                            ? "translate-x-6 bg-blue-500"
+                                            ? "translate-x-5 bg-blue-500"
                                             : "translate-x-0 bg-yellow-400"
                                     }`}
                                 ></div>

@@ -15,8 +15,7 @@ export default function Home() {
     return () => window.removeEventListener("theme-changed", updateTheme);
   }, []);
 
-  // Tailwind class combinations
-  const containerStyles = `min-h-screen ${isDark ? 'bg-gray-700' : 'bg-gray'}`;
+  const containerStyles = `min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray'}`;
   const headingStyles = `text-4xl font-bold text-center ${isDark ? 'text-gray-100' : 'text-gray-600'} mb-8`;
   const subheadingStyles = `text-2xl ${isDark ? 'text-gray-300' : 'text-gray-500'} mb-4`;
   const cardStyles = `${isDark ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow-md`;
@@ -53,19 +52,13 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-12 mb-12">
           {features.map((feature, index) => (
             <div key={index} className={cardStyles}>
               <h3 className={cardTitleStyles}>{feature.title}</h3>
               <p className={cardTextStyles}>{feature.description}</p>
             </div>
           ))}
-        </div>
-
-        <div className="text-center">
-          <button className={buttonStyles}>
-            Get Started
-          </button>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ package com.expensetracker.config;
 
 import com.expensetracker.user.User;
 import com.expensetracker.user.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -23,35 +23,35 @@ import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.spec.SecretKeySpec;
+import java.util.HashMap;
+import java.util.Map;
 
 
 @EnableMethodSecurity
 @Configuration
 @Slf4j
 public class SecurityConfig {
-    private AuthenticationManager authenticationManager;
+
 
     @Bean
     @Profile("!test")
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   UserService userService,
-                                                   JwtEncoder jwtEncoder) throws Exception {
+                                                   UserService userService) throws Exception {
 
         http
                 .formLogin(form -> form
                         .loginProcessingUrl("/login")
                         .successHandler((request, response, authentication) -> {
                             String username = authentication.getName();
-                            Jwt jwt = userService.createJwt(username, jwtEncoder);
+                            Jwt jwt = userService.createJwt(username);
                             userService.setAuthentication(authentication);
                             response.setStatus(200);
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"access_token\": \"" + jwt.getTokenValue() + "\"}");
+                            Map<String, String> responseBody = new HashMap<>();
+                            responseBody.put("access_token", jwt.getTokenValue());
+                            new ObjectMapper().writeValue(response.getWriter(), responseBody);
+
                         })
                         .failureHandler((request, response, exception) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -62,15 +62,8 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                 .loginPage("/oauth2/authorization/github")
                 .successHandler((request, response, authentication) -> {
-                    OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
-                    String username = token.getPrincipal().getAttribute("login");
-                    User user = userService.OAuthSignUp(username, authenticationManager);
-                    userService.setAuthentication(authentication);
-                    Jwt jwt = userService.createJwt(user.getUsername(), jwtEncoder);
-                    response.setStatus(200);
-                    response.setContentType("application/json");
-
-                    response.getWriter().write("{\"access_token\": \"" + jwt.getTokenValue() + "\"}");
+                    String redirectUrl = userService.OAuthSignUp(authentication);
+                    response.sendRedirect(redirectUrl);
                 }))
 
             .oauth2ResourceServer(oauth2 -> oauth2

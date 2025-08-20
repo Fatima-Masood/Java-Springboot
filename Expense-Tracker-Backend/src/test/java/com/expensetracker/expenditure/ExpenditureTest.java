@@ -3,6 +3,7 @@ package com.expensetracker.expenditure;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,6 +18,7 @@ class ExpenditureTest {
                 .user("testuser")
                 .title("Lunch")
                 .amount(15.5)
+                .yearMonth(YearMonth.of(2024, 8).toString())
                 .timestamp(now)
                 .build();
 
@@ -27,7 +29,7 @@ class ExpenditureTest {
         assertEquals(original.getUser(), copy.getUser());
         assertEquals(original.getTitle(), copy.getTitle());
         assertEquals(original.getAmount(), copy.getAmount());
-        assertEquals(original.getTimestamp(), copy.getTimestamp());
+        assertEquals(original.getYearMonth(), copy.getYearMonth());
     }
 
     @Test
@@ -37,6 +39,7 @@ class ExpenditureTest {
         assertNull(copy.getId());
         assertNull(copy.getUser());
         assertNull(copy.getTitle());
+        assertNull(copy.getYearMonth());
         assertEquals(0, copy.getAmount());
         assertNotNull(copy.getTimestamp());
     }

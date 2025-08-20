@@ -1,22 +1,20 @@
 package com.expensetracker.expenditure;
 
 import com.expensetracker.dto.ExpenditureDTO;
-import com.expensetracker.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,6 +59,7 @@ class ExpenditureControllerTest {
         savedExp.setId("123");
         savedExp.setTitle("Lunch");
         savedExp.setAmount(15.5);
+        savedExp.setYearMonth(YearMonth.of(2024, 8).toString());
         savedExp.setUser(mockUsername);
 
         when(expenditureService.addExpenditure(eq(mockUsername), any(ExpenditureDTO.class)))
@@ -72,6 +71,7 @@ class ExpenditureControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Lunch"))
+                .andExpect(jsonPath("$.yearMonth").value("2024-08"))
                 .andExpect(jsonPath("$.user").value(mockUsername));
     }
 
@@ -91,6 +91,7 @@ class ExpenditureControllerTest {
         ExpenditureDTO dto = new ExpenditureDTO();
         dto.setTitle("Dinner");
         dto.setAmount(20.0);
+        dto.setYearMonth(YearMonth.of(2025, 8).toString());
 
         mockMvc.perform(post("/api/expenditures")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -106,7 +107,7 @@ class ExpenditureControllerTest {
     void testUpdateExpenditure_Success() throws Exception {
         ExpenditureDTO dto = new ExpenditureDTO();
         dto.setTitle("New Title");
-        dto.setAmount(20.0);
+        dto.setAmount(30.0);
 
         Expenditure updated = new Expenditure();
         updated.setId("1");

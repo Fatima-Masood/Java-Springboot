@@ -25,7 +25,7 @@ const Footer = () => {
 
     return (
         <footer className={footerClass}>
-            <p className="m-0 text-base trackings-wide">
+            <p className="m-0 text-base trackings-wide text-gray-500">
                 &copy; {new Date().getFullYear()} Expense Tracker. All rights reserved.
             </p>
         </footer>

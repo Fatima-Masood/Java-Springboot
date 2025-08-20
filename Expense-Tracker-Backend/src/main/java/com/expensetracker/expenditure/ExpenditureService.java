@@ -4,6 +4,7 @@ import com.expensetracker.dto.ExpenditureDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,7 @@ public class ExpenditureService {
         exp.setTitle(request.getTitle());
         exp.setAmount(request.getAmount());
         exp.setUser(username);
+        exp.setYearMonth(request.getYearMonth() != null ? request.getYearMonth() : YearMonth.now().toString());
         return expenditureRepository.save(exp);
     }
 

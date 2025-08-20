@@ -11,7 +11,7 @@ export default function Dashboard() {
   const [token, setToken] = useState("");
   const [isDark, setIsDark] = useState(false);
 
-  // Theme
+  
   useEffect(() => {
     const updateTheme = () => {
       const currentTheme = localStorage.getItem("theme") || "dark";
@@ -22,13 +22,13 @@ export default function Dashboard() {
     return () => window.removeEventListener("theme-changed", updateTheme);
   }, []);
 
-  // Get token
+  
   useEffect(() => {
     const token = Cookies.get("token");
     setToken(token);
   }, []);
 
-  // Fetch user
+  
   useEffect(() => {
     setMessage("");
     setError("");
@@ -55,7 +55,7 @@ export default function Dashboard() {
     fetchUser();
   }, [token]);
 
-  // Style variables
+  
   const bgGradient = isDark
     ? "bg-gradient-to-br from-blue-900 via-gray-800 to-blue-900"
     : "bg-gradient-to-br from-gray-100 to-white";
@@ -82,7 +82,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Main content with gradient */}
       <main className={`${bgGradient} flex-1 flex justify-center items-start py-10 transition-colors duration-300`}>
         <div className={`${glassCard} ${cardPadding} max-w-2xl w-full`}>
           <div className="flex flex-col items-center">
@@ -113,7 +112,7 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Footer */}
+
       <footer className="h-20 flex items-center justify-center bg-gray-900 text-white shadow">
         <p className="text-sm">© 2025 My App</p>
       </footer>
