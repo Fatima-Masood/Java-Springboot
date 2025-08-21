@@ -12,7 +12,8 @@ export default function DeleteUser({token, setError, setMessage}) {
         }
 
         try {
-            const res = await fetch(`../api/users/delete`, {
+            console.log("Deleting user with token:", token);
+            const res = await fetch("../api/users", {
                 method: "DELETE",
                 credentials: "include",
                 headers: {
@@ -27,13 +28,11 @@ export default function DeleteUser({token, setError, setMessage}) {
 
             setMessage("Account deleted. Redirecting...");
             setTimeout(() => {
-                Cookies.remove("token");
-                Cookies.remove("csrfToken");
                 router.push("/authentication/login");
             }, 2000);
         } catch (err) {
             console.error(err);
-            setError(err.message);
+            setError("Error deleting account");
         }
     };
 

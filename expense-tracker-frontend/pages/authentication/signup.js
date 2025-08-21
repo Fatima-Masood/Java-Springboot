@@ -32,17 +32,13 @@
       e.preventDefault();
 
       try {
-        const params = new URLSearchParams();
-        params.append("username", username);
-        params.append("password", password);
-
-        const response = await fetch("/login", {
+        const response = await fetch("../api/users/register", {
           method: "POST",
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/json",
             "X-XSRF-TOKEN": csrfToken,
           },
-          body: params.toString(),
+          body: JSON.stringify({ username, password }),
           credentials: "include",
         });
 
@@ -52,11 +48,11 @@
           router.push("../user/dashboard");
         } else {
           const errorText = await response.text();
-          console.error("Login failed:", errorText);
-          alert("Login Failed, please check your credentials.");
+          console.error("Signup failed:", errorText);
+          alert("Signup Failed, please check your credentials.");
         }
       } catch (error) {
-        console.error("Login error:", error);
+        console.error("Signup error:", error);
         alert("An error occurred while logging in. Please try again.");
       }
     };
@@ -99,7 +95,7 @@
       <div className={`min-h-screen flex items-center justify-center ${theme.bg} transition-colors pb-12`}>
         <div className={`p-10 rounded-2xl shadow-2xl w-full max-w-md ${theme.card} transition-colors`}>
           <h2 className="text-3xl font-extrabold mb-8 text-center" style={isDark ? { color: "#7da0d6" } : { color: "#3b5998" }}>
-            Login to Expense Tracker
+            Get Started With Expense Tracker
           </h2>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -136,7 +132,7 @@
               className={`w-full py-2 rounded-lg font-semibold transition ${theme.button}`}
               type="submit"
             >
-              Login
+              Signup
             </button>
             <div className="flex items-center my-4">
               <div className={`flex-grow border-t ${theme.divider}`}></div>
@@ -148,7 +144,7 @@
               onClick={startOAuthPopup}
               type="button"
             >
-              Login with GitHub
+              Signup with GitHub
             </button>
           </form>
         </div>

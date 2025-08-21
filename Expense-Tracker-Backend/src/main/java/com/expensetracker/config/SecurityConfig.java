@@ -1,15 +1,17 @@
 package com.expensetracker.config;
 
-import com.expensetracker.user.User;
 import com.expensetracker.user.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -18,75 +20,80 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-
-import javax.crypto.spec.SecretKeySpec;
-import java.util.HashMap;
-import java.util.Map;
 
 
 @EnableMethodSecurity
 @Configuration
 @Slf4j
 public class SecurityConfig {
-
+    @Value("${frontend.redirect-url}")
+    private String redirectUrl;
 
     @Bean
-    @Profile("!test")
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    UserService userService) throws Exception {
 
         http
-                .formLogin(form -> form
-                        .loginProcessingUrl("/login")
-                        .successHandler((request, response, authentication) -> {
-                            String username = authentication.getName();
-                            Jwt jwt = userService.createJwt(username);
-                            userService.setAuthentication(authentication);
-                            response.setStatus(200);
-                            Map<String, String> responseBody = new HashMap<>();
-                            responseBody.put("access_token", jwt.getTokenValue());
-                            new ObjectMapper().writeValue(response.getWriter(), responseBody);
-
-                        })
-                        .failureHandler((request, response, exception) -> {
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"error\": \"Invalid username or password\"}");
-                        })
-                )
-                .oauth2Login(oauth2 -> oauth2
+            .formLogin(form -> form
+                .loginProcessingUrl("/login")
+                .successHandler((request, response, authentication) -> {
+                  String username = authentication.getName();
+                  Jwt jwt = userService.createJwt(username);
+                  userService.setAuthentication(authentication);
+                  response.setStatus(200);
+                  Map<String, String> responseBody = new HashMap<>();
+                  responseBody.put("access_token", jwt.getTokenValue());
+                  new ObjectMapper().writeValue(response.getWriter(), responseBody);
+                })
+                .failureHandler((request, response, exception) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Invalid username or password\"}");
+                })
+            )
+            .oauth2Login(oauth2 -> oauth2
                 .loginPage("/oauth2/authorization/github")
                 .successHandler((request, response, authentication) -> {
-                    String redirectUrl = userService.OAuthSignUp(authentication);
-                    response.sendRedirect(redirectUrl);
-                }))
-
+                    String token = userService.createJwt(authentication.getName()).getTokenValue();
+                    Cookie cookie = new Cookie("access_token", token);
+                    cookie.setHttpOnly(false);
+                    cookie.setSecure(true);
+                    cookie.setPath("/");
+                    cookie.setMaxAge(60 * 60);
+                    response.addCookie(cookie);
+                    response.sendRedirect("http://localhost:3000/oauth2/github");
+                })
+            )
             .oauth2ResourceServer(oauth2 -> oauth2
-                    .jwt(Customizer.withDefaults()))
-
+                .jwt(Customizer.withDefaults())
+            )
             .sessionManagement(config -> config
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
             .authorizeHttpRequests(config -> config
-            .requestMatchers(
-                    "/error",
-                    "/v3/api-docs/**",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/favicon.ico",
-                    "/oauth2/**",
-                    "/target/**",
-                    "/api/users/login",
-                    "/api/users/register").permitAll()
-            .anyRequest().authenticated())
+                .requestMatchers(
+                "/error",
+                "/v3/api-docs/**",
+                "/swagger-ui/**",
+                "/swagger-ui.html",
+                "/favicon.ico",
+                "/oauth2/**",
+                "/target/**",
+                "/api/users/login",
+                "/api/users/register").permitAll()
+                .anyRequest().authenticated()
+            )
             .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                    .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()));
-
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+            );
         return http.build();
     }
 

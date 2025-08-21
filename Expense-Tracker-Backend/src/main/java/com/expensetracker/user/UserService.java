@@ -2,8 +2,10 @@ package com.expensetracker.user;
 
 import com.expensetracker.dto.PasswordUpdateRequest;
 import com.expensetracker.expenditure.ExpenditureRepository;
+import com.expensetracker.limits.MonthlyLimitRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,7 +17,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
@@ -27,6 +28,7 @@ import java.util.Collections;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class UserService implements UserDetailsService {
 
     @Autowired
@@ -36,9 +38,9 @@ public class UserService implements UserDetailsService {
     @Autowired
     private ExpenditureRepository expenditureRepository;
     @Autowired
+    private MonthlyLimitRepository monthlyLimitRepository;
+    @Autowired
     private JwtEncoder jwtEncoder;
-    @Value("${frontend.url}")
-    private String frontendUrl;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -63,6 +65,7 @@ public class UserService implements UserDetailsService {
     public String OAuthSignUp(Authentication authentication) {
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         String email = oAuth2User.getAttribute("login");
+        log.info("User email: " + email);
         if (email == null) {
             throw new RuntimeException("Email not found in OAuth2 user attributes");
         }
@@ -77,7 +80,7 @@ public class UserService implements UserDetailsService {
                 });
 
         Jwt jwt = createJwt(email);
-        return frontendUrl + "/oauth2/redirect?token=" + jwt.getTokenValue();
+        return jwt.getTokenValue();
     }
 
     public String register(String username, String password,
@@ -92,7 +95,7 @@ public class UserService implements UserDetailsService {
         }
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, password));
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        setAuthentication(auth);
         Jwt jwt = createJwt(username);
         return "{\"access_token\": \"" + jwt.getTokenValue() + "\"}";
     }
@@ -128,6 +131,7 @@ public class UserService implements UserDetailsService {
 
         User user = optionalUser.get();
         expenditureRepository.deleteByUser(username);
+        monthlyLimitRepository.deleteByUsername(username);
         userRepository.delete(user);
         return 0;
     }

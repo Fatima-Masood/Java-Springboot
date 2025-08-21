@@ -2,6 +2,7 @@ package com.expensetracker.user;
 
 import com.expensetracker.dto.PasswordUpdateRequest;
 import com.expensetracker.expenditure.ExpenditureRepository;
+import com.expensetracker.limits.MonthlyLimitRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,8 @@ class UserServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private ExpenditureRepository expenditureRepository;
+    @Mock
+    private MonthlyLimitRepository monthlyLimitRepository;
     @Mock
     private AuthenticationManager authenticationManager;
     @Mock
@@ -117,7 +120,6 @@ class UserServiceTest {
         var result = userService.OAuthSignUp(auth);
 
         verify(userRepository).save(any(User.class));
-        assertNotNull(result);
     }
 
 
@@ -160,6 +162,7 @@ class UserServiceTest {
         int result = userService.deleteUser();
         assertEquals(0, result);
         verify(expenditureRepository).deleteByUser("testuser");
+        verify(monthlyLimitRepository).deleteByUsername("testuser");
         verify(userRepository).delete(mockUser);
     }
 

@@ -5,12 +5,6 @@ import Cookies from "js-cookie";
 export default function ChangePassword({ token, setError, setMessage, inputBg, inputText, isDark }) {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [csrfToken, setCsrfToken] = useState("");
-
-  useEffect(() => {
-    const csrf = Cookies.get("XSRF-TOKEN") || "";
-    setCsrfToken(csrf);
-  }, []);
 
   if (!token) {
     return (
@@ -26,13 +20,12 @@ export default function ChangePassword({ token, setError, setMessage, inputBg, i
     setError("");
 
     try {
-      const res = await fetch(`/api/users/password`, {
+      const res = await fetch(`../api/users`, {
         method: "PUT",
         credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          "X-XSRF-TOKEN": csrfToken
         },
         body: JSON.stringify({ oldPassword, newPassword }),
       });

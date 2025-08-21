@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface MonthlyLimitRepository extends MongoRepository<MonthlyLimit, String> {
     Optional<MonthlyLimit> findByUsernameAndYearMonth(String username, String month);
-
+    void deleteByUsername (String username);
 }
