@@ -131,7 +131,17 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
                 <version>3.27.0</version>
+                <executions>
+                    <execution>
+                        <id>default-cli</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+                </executions>
             </plugin>
+
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
@@ -147,7 +157,7 @@
                 </executions>
                 <configuration>
                     <effort>Max</effort>
-                    <threshold>Medium</threshold>
+                    <threshold>Normal</threshold>
                     <failOnError>true</failOnError>
                     <plugins>
                         <plugin>

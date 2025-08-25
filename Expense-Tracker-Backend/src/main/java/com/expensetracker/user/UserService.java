@@ -7,7 +7,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,7 +18,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,7 +68,6 @@ public class UserService implements UserDetailsService {
     public String OAuthSignUp(Authentication authentication) {
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         String email = oAuth2User.getAttribute("login");
-        log.info("User email: " + email);
         if (email == null) {
             throw new RuntimeException("Email not found in OAuth2 user attributes");
         }
@@ -126,8 +128,7 @@ public class UserService implements UserDetailsService {
     public int deleteUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Optional<User> optionalUser = userRepository.findByUsername(username);
-        if (optionalUser.isEmpty())
-            return -1;
+        if (optionalUser.isEmpty()) return -1;
 
         User user = optionalUser.get();
         expenditureRepository.deleteByUser(username);

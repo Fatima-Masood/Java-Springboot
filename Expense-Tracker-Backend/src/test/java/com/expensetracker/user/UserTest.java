@@ -16,7 +16,6 @@ class UserTest {
                 .password("123")
                 .role("USER")
                 .build();
-
         assertEquals(user, user);
     }
 

@@ -1,14 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import ChangePassword from "@/components/user/ChangePassword";
 import Cookies from "js-cookie";
 import DeleteUser from "@/components/user/DeleteUser";
+import { useRouter } from "next/navigation";
+import { AppContext } from "@/context/AppContext";
 
 export default function Dashboard() {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [token, setToken] = useState("");
+  const {token, setToken} = useContext(AppContext);
   const [isDark, setIsDark] = useState(false);
 
   
@@ -23,9 +26,11 @@ export default function Dashboard() {
   }, []);
 
   
-  useEffect(() => {
-    const token = Cookies.get("token");
-    setToken(token);
+  useEffect(() => { 
+    if (!token) {
+      const token = Cookies.get("token");
+      setToken(token);
+    }
   }, []);
 
   
@@ -57,7 +62,7 @@ export default function Dashboard() {
 
   
   const bgGradient = isDark
-    ? "bg-gradient-to-br from-blue-900 via-gray-800 to-blue-900"
+    ? "bg-gray-700"
     : "bg-gradient-to-br from-gray-100 to-white";
   const glassCard =
     "backdrop-blur-lg bg-white/10 border border-white/20 shadow-2xl rounded-3xl";
@@ -68,12 +73,13 @@ export default function Dashboard() {
   const inputBg = isDark ? "bg-gray-800/80" : "bg-white/80";
   const inputText = isDark ? "text-blue-100" : "text-blue-900";
 
-  if (!token) {
+  
+  if (error) {
     return (
       <div className={`${bgGradient} flex justify-center items-center min-h-screen`}>
         <div className={`${glassCard} ${cardPadding} max-w-lg w-full flex flex-col items-center`}>
           <p className="text-red-400 text-xl font-semibold text-center">
-            Authentication token is missing.<br />Please log in again.
+           {error}.<br />Please log in again.
           </p>
         </div>
       </div>
@@ -88,8 +94,6 @@ export default function Dashboard() {
             <h1 className={`text-5xl font-extrabold mb-4 tracking-tight ${heading}`}>Welcome</h1>
             <span className={`text-lg font-medium mb-6 ${subHeading}`}>User Dashboard</span>
           </div>
-
-          {error && <div className="bg-red-100 text-red-700 px-4 py-2 rounded-lg shadow mb-6 text-center">{error}</div>}
           {message && <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg shadow mb-6 text-center">{message}</div>}
 
           {user && (

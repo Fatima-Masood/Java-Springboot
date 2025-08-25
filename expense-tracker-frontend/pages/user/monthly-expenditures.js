@@ -1,16 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import ExpenditureList from "@/components/expenditures/ExpenditureList";
 import Cookies from "js-cookie";
+import { AppContext } from "@/context/AppContext";
 
 export default function MonthlyExpenditure() {
   const [summary, setSummary] = useState(null);
   const [expenditures, setExpenditures] = useState([]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
-  const [token, setToken] = useState("");
+  const {token, setToken} = useContext(AppContext);
   const [isDark, setIsDark] = useState(false);
 
   const [showLimitForm, setShowLimitForm] = useState(false);
@@ -40,7 +41,6 @@ export default function MonthlyExpenditure() {
     setMonth((prev) => prev ?? currentDate.getMonth() + 1);
   }, []);
 
-  // Fetch summary
   const fetchSummary = async () => {
     if (!token) return;
     try {
@@ -92,7 +92,7 @@ export default function MonthlyExpenditure() {
   return (
     <div
       className={`${
-        isDark ? "bg-gray-700 text-white" : "bg-white text-gray-800"
+        isDark ? "bg-gray-700 text-white" : "bg-gradient-to-br from-gray-100 to-white text-gray-800"
       } p-6 min-h-screen`}
     >
       <h1

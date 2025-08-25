@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import ExpenditureList from "@/components/expenditures/ExpenditureList";
 import Cookies from "js-cookie";
+import { AppContext } from "@/context/AppContext";
 
 export default function AllExpenditures() {
   const [expenditures, setExpenditures] = useState([]);
-  const [token, setToken] = useState("");
+  const {token, setToken} = useContext(AppContext);
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function AllExpenditures() {
   }, [token]);
 
   return (
-    <div className={`${isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} p-6 min-h-screen`}>
+    <div className={`${isDark ? 'bg-gray-700 text-white' : 'bg-gradient-to-br from-gray-100 to-white text-gray-800'} p-6 min-h-screen`}>
       <h1 className={`mt-8 text-4xl font-extrabold mb-6 text-center tracking-tight ${
         isDark ? 'text-blue-400' : 'text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-gray-400 to-gray-800'
       }`}>

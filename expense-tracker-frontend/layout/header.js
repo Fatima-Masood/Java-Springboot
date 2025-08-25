@@ -1,19 +1,14 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState, useContext } from "react";
-import { AppContext } from "@/pages/_app";
-import Cookies from "js-cookie";
+import { useState, useContext } from "react";
+import { AppContext } from "../context/AppContext";
 
-export default function Header(props) {
+export default function Header() {
     const router = useRouter();
-    const [token, setToken] = useState(null);
-    const {theme, setTheme} = useContext(AppContext);
+    const { token, setToken, theme, setTheme } = useContext(AppContext);
     const [darkMode, setDarkMode] = useState(theme === "dark");
 
-    useEffect(() => {
-        const newToken = Cookies.get("token");
-        setToken(newToken);
-    }, []);
+    console.log("Theme in header:", theme);
 
     const toggleDarkMode = () => {
         setTheme(theme === "dark" ? "light" : "dark");
@@ -24,23 +19,26 @@ export default function Header(props) {
         window.dispatchEvent(new Event("theme-changed"));
     };
 
+    console.log("1");
+
     const logout = async () => {
         try {
-            await fetch(`../api/users/logout`, {
+            await fetch("../api/users/logout", {
                 method: "GET",
                 credentials: "include",
                 headers: {
                     Authorization: `Bearer ${token}`,
-                }
+                },
             });
         } catch (error) {
             console.error("Logout failed:", error);
         }
+        
         setToken(null);
-        setTimeout(() => {
-            router.push("../authentication/login");
-        }, 100);
+        router.push("../authentication/login");
     };
+
+    console.log("2");
 
     const headerClass = `shadow-lg px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-6 sm:gap-0 transition-colors duration-300 fixed top-0 left-0 right-0 z-50 ${
         darkMode ? "bg-gray-900" : "bg-gray-100"

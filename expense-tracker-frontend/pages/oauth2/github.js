@@ -1,22 +1,25 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useContext } from "react";
 import Cookies from "js-cookie";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AppContext } from "@/context/AppContext";
 
 export default function OAuthRedirect() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const {setToken} = useContext(AppContext);
 
   useEffect(() => {
-    const token = Cookies.get("access_token");
+    const token = searchParams.get("token");
     if (!token) {
-      console.error("No access token found in cookies.");
+      console.error("No access token found in URL.");
       return;
     }
-
     Cookies.set("token", token, { sameSite: "Strict" });
+    setToken(token);
     console.log("Access token set in cookies:", token);
     window.close();
-  }, [router]);
+  }, [router, searchParams]);
 
   return <div>Logging in, please wait...</div>;
 }
